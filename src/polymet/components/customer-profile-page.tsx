@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
   MailIcon,
@@ -13,14 +14,33 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CUSTOMERS } from "@/polymet/data/customers-data";
 import TransactionHistoryChart from "@/polymet/components/transaction-history-chart";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
-export default function CustomerProfilePage() {
-  const { customerId = "" } = useParams();
+interface CustomerProfilePageProps {
+  customers: typeof CUSTOMERS;
+  setCustomers: React.Dispatch<React.SetStateAction<typeof CUSTOMERS>>;
+}
 
-  // Find the customer by ID
-  const customer = CUSTOMERS.find((c) => c.id === customerId);
+export default function CustomerProfilePage({ customers, setCustomers }: CustomerProfilePageProps) {
+  const { customerId } = useParams();
+  const navigate = useNavigate();
+  const customer = customers.find((c) => c.id === customerId);
+  const [form, setForm] = useState<typeof CUSTOMERS[number]>(customer!);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // If customer not found, show error state
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -28,15 +48,35 @@ export default function CustomerProfilePage() {
         <p className="text-muted-foreground mb-6">
           The customer you're looking for doesn't exist or has been removed.
         </p>
-        <Link to="/customers">
-          <Button>
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back to Customers
-          </Button>
-        </Link>
+        <Button variant="outline" onClick={() => navigate('/customers')}>
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to Customers
+        </Button>
       </div>
     );
   }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAvatarFile(e.target.files[0]);
+      setForm(f => ({ ...f, avatar: URL.createObjectURL(e.target.files![0]) }));
+    }
+  };
+
+  const handleSave = () => {
+    setCustomers(prev => prev.map(c => c.id === customerId ? form : c));
+    navigate('/customers');
+  };
+
+  const handleDelete = () => {
+    setCustomers(prev => prev.filter(c => c.id !== customerId));
+    navigate('/customers');
+  };
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -66,63 +106,90 @@ export default function CustomerProfilePage() {
       .toUpperCase();
   };
 
+  // Demo stats (replace with real data as needed)
+  const stats = [
+    { label: 'RFQs', value: 29 },
+    { label: 'Part Numbers', value: 157 },
+    { label: 'Quotes Sent', value: 87 },
+    { label: 'Purchase Orders', value: 0 },
+    { label: 'Pieces Quoted', value: 87.00 },
+    { label: 'Quoted Value', value: '$2M' },
+  ];
+
+  // Demo RFQ history (replace with real data as needed)
+  const rfqHistory = [
+    { name: 'Busch - Torrevac', partNumbers: 6, status: 'Pendiente por Revisar', capacity: 'CNC', created: '21-May-2025' },
+    { name: 'Busch - 5602011', partNumbers: 4, status: 'RFQ creado(s)', capacity: 'CNC', created: '15-Apr-2025' },
+    // ... more rows ...
+  ];
+
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <Link to="/customers">
-        <Button variant="ghost" className="pl-0 mb-2">
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Customers
-        </Button>
-      </Link>
+      <Button variant="ghost" className="pl-0 mb-2" onClick={() => navigate('/customers')}>
+        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+        Back to Customers
+      </Button>
 
       {/* Customer header */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
-        <Avatar className="h-20 w-20 border">
-          {customer.avatar ? (
-            <AvatarImage src={customer.avatar} alt={customer.name} />
-          ) : (
-            <AvatarFallback className="text-xl">
-              {getInitials(customer.name)}
-            </AvatarFallback>
-          )}
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-20 w-20 border">
+            {form.avatar ? (
+              <AvatarImage src={form.avatar} alt={form.name} />
+            ) : (
+              <AvatarFallback className="text-xl">
+                {getInitials(form.name)}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+          <Button size="sm" variant="outline" className="absolute bottom-0 right-0" onClick={() => fileInputRef.current?.click()}>
+            Upload
+          </Button>
+        </div>
 
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{customer.name}</h1>
+            <h1 className="text-2xl font-bold">{form.name}</h1>
             <Badge
-              variant={customer.status === "active" ? "default" : "secondary"}
+              variant={form.status === "active" ? "default" : "secondary"}
               className={
-                customer.status === "active"
+                form.status === "active"
                   ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
                   : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
               }
             >
-              {customer.status === "active" ? "Active" : "Inactive"}
+              {form.status === "active" ? "Active" : "Inactive"}
             </Badge>
           </div>
-          <p className="text-lg text-muted-foreground">{customer.company}</p>
+          <p className="text-lg text-muted-foreground">{form.company}</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm pt-2">
             <div className="flex items-center gap-1">
               <MailIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{customer.email}</span>
+              <span>{form.email}</span>
             </div>
             <div className="flex items-center gap-1">
               <PhoneIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{customer.phone}</span>
+              <span>{form.phone}</span>
             </div>
             <div className="flex items-center gap-1">
               <MapPinIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{customer.address}</span>
+              <span>{form.address}</span>
             </div>
             <div className="flex items-center gap-1">
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>Joined {formatDate(customer.joinedDate)}</span>
+              <span>Joined {formatDate(form.joinedDate)}</span>
             </div>
           </div>
         </div>
@@ -130,7 +197,7 @@ export default function CustomerProfilePage() {
         <div className="flex flex-col items-end gap-2">
           <div className="text-sm text-muted-foreground">Total Spent</div>
           <div className="text-2xl font-bold">
-            {formatCurrency(customer.totalSpent)}
+            {formatCurrency(form.totalSpent)}
           </div>
         </div>
       </div>
@@ -143,7 +210,7 @@ export default function CustomerProfilePage() {
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-6 mt-6">
-          <TransactionHistoryChart transactions={customer.transactions} />
+          <TransactionHistoryChart transactions={form.transactions} />
 
           <Card>
             <CardHeader>
@@ -159,8 +226,8 @@ export default function CustomerProfilePage() {
                   <div>Status</div>
                 </div>
                 <div className="divide-y">
-                  {customer.transactions.length > 0 ? (
-                    customer.transactions.map((transaction) => (
+                  {form.transactions.length > 0 ? (
+                    form.transactions.map((transaction) => (
                       <div
                         key={transaction.id}
                         className="grid grid-cols-5 p-3 text-sm"
@@ -218,31 +285,31 @@ export default function CustomerProfilePage() {
                     <dt className="text-sm font-medium text-muted-foreground">
                       Full Name
                     </dt>
-                    <dd className="text-sm">{customer.name}</dd>
+                    <dd className="text-sm">{form.name}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Company
                     </dt>
-                    <dd className="text-sm">{customer.company}</dd>
+                    <dd className="text-sm">{form.company}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Email
                     </dt>
-                    <dd className="text-sm">{customer.email}</dd>
+                    <dd className="text-sm">{form.email}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Phone
                     </dt>
-                    <dd className="text-sm">{customer.phone}</dd>
+                    <dd className="text-sm">{form.phone}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Address
                     </dt>
-                    <dd className="text-sm">{customer.address}</dd>
+                    <dd className="text-sm">{form.address}</dd>
                   </div>
                 </dl>
               </CardContent>
@@ -258,7 +325,7 @@ export default function CustomerProfilePage() {
                     <dt className="text-sm font-medium text-muted-foreground">
                       Customer ID
                     </dt>
-                    <dd className="text-sm">{customer.id}</dd>
+                    <dd className="text-sm">{form.id}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
@@ -267,15 +334,15 @@ export default function CustomerProfilePage() {
                     <dd className="text-sm">
                       <Badge
                         variant={
-                          customer.status === "active" ? "default" : "secondary"
+                          form.status === "active" ? "default" : "secondary"
                         }
                         className={
-                          customer.status === "active"
+                          form.status === "active"
                             ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
                             : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
                         }
                       >
-                        {customer.status === "active" ? "Active" : "Inactive"}
+                        {form.status === "active" ? "Active" : "Inactive"}
                       </Badge>
                     </dd>
                   </div>
@@ -284,21 +351,21 @@ export default function CustomerProfilePage() {
                       Join Date
                     </dt>
                     <dd className="text-sm">
-                      {formatDate(customer.joinedDate)}
+                      {formatDate(form.joinedDate)}
                     </dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Total Transactions
                     </dt>
-                    <dd className="text-sm">{customer.transactions.length}</dd>
+                    <dd className="text-sm">{form.transactions.length}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Total Spent
                     </dt>
                     <dd className="text-sm">
-                      {formatCurrency(customer.totalSpent)}
+                      {formatCurrency(form.totalSpent)}
                     </dd>
                   </div>
                 </dl>
@@ -307,6 +374,31 @@ export default function CustomerProfilePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Save/Delete Buttons */}
+      <div className="flex gap-2 mt-6">
+        <Button type="button" variant="default" onClick={handleSave}>Save</Button>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+              Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this customer? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button type="button" variant="outline" onClick={() => navigate('/customers')}>Back to list</Button>
+      </div>
     </div>
   );
 }

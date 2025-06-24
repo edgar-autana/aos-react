@@ -11,10 +11,13 @@ import {
 } from "@/components/ui/select";
 import { CUSTOMERS } from "@/polymet/data/customers-data";
 import CustomerListItem from "@/polymet/components/customer-list-item";
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function CustomersPage() {
+export default function CustomersPage({ customers, setCustomers }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const navigate = useNavigate();
 
   // Filter customers based on search query and status filter
   const filteredCustomers = CUSTOMERS.filter((customer) => {
@@ -135,18 +138,42 @@ export default function CustomersPage() {
       </div>
 
       {/* Customers list */}
-      <div className="space-y-4">
-        {filteredCustomers.length > 0 ? (
-          filteredCustomers.map((customer) => (
-            <CustomerListItem key={customer.id} customer={customer} />
-          ))
-        ) : (
-          <div className="text-center py-12 border rounded-lg bg-background">
-            <p className="text-muted-foreground">
-              No customers found matching your criteria
-            </p>
-          </div>
-        )}
+      <div className="overflow-x-auto border rounded-lg bg-background">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-muted">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
+              {/* ...other columns... */}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <tr key={customer.id} className="hover:bg-muted">
+                  <td className="px-4 py-2 whitespace-nowrap flex items-center gap-2">
+                    <span onClick={() => navigate(`/customers/${customer.id}`)} className="cursor-pointer">
+                      <Avatar className="h-8 w-8">
+                        {customer.avatar ? (
+                          <AvatarImage src={customer.avatar} alt={customer.name} />
+                        ) : (
+                          <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
+                        )}
+                      </Avatar>
+                    </span>
+                    <span>{customer.name}</span>
+                  </td>
+                  {/* ...other columns... */}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No customers found matching your criteria
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

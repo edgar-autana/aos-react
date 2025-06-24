@@ -14,6 +14,7 @@ import {
   BuildingIcon,
   FileTextIcon,
   ClipboardIcon,
+  Contact,
 } from "lucide-react";
 
 interface AppLayoutProps {
@@ -80,6 +81,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       name: "RFQs",
       path: "/rfqs",
       icon: <ClipboardIcon className="h-5 w-5" />,
+    },
+    {
+      name: "Contacts",
+      path: "/contacts",
+      icon: <Contact className="h-5 w-5" />,
     },
     {
       name: "Customers",
