@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
   MailIcon,
@@ -17,14 +18,49 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SUPPLIERS } from "@/polymet/data/suppliers-data";
 import SupplierTransactionHistoryChart from "@/polymet/components/supplier-transaction-history-chart";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Link } from "react-router-dom";
 
-export default function SupplierProfilePage() {
-  const { supplierId = "" } = useParams();
+const CORE_CAPACITY_OPTIONS = [
+  "Aluminum Die Casting",
+  "CNC Machining",
+  "Injection Molding",
+  "Sheet Metal",
+];
+const SUPPLIER_TYPE_OPTIONS = ["Tolling", "Manufacturer", "Distributor"];
+const SIZE_OPTIONS = ["Small", "Medium", "Large"];
+const STATE_OPTIONS = ["CDMX", "Jalisco", "Nuevo León", "Querétaro", "Estado de México"];
 
-  // Find the supplier by ID
-  const supplier = SUPPLIERS.find((s) => s.id === supplierId);
+interface SupplierProfilePageProps {
+  suppliers: typeof SUPPLIERS;
+  setSuppliers: React.Dispatch<React.SetStateAction<typeof SUPPLIERS>>;
+}
 
-  // If supplier not found, show error state
+export default function SupplierProfilePage({ suppliers, setSuppliers }: SupplierProfilePageProps) {
+  const { supplierId } = useParams();
+  const navigate = useNavigate();
+  const supplier = suppliers.find((s) => s.id === supplierId);
+  const [form, setForm] = useState<typeof SUPPLIERS[0]>(supplier!);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   if (!supplier) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -41,6 +77,30 @@ export default function SupplierProfilePage() {
       </div>
     );
   }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setForm(f => ({ ...f, [name]: checked }));
+    } else {
+      setForm(f => ({ ...f, [name]: value }));
+    }
+  };
+
+  const handleDropdown = (name: string, value: string) => {
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleSave = () => {
+    setSuppliers(prev => prev.map(s => s.id === supplierId ? form : s));
+    navigate('/suppliers');
+  };
+
+  const handleDelete = () => {
+    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+    navigate('/suppliers');
+  };
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -123,56 +183,56 @@ export default function SupplierProfilePage() {
       {/* Supplier header */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <Avatar className="h-20 w-20 border">
-          {supplier.avatar ? (
-            <AvatarImage src={supplier.avatar} alt={supplier.name} />
+          {form.avatar ? (
+            <AvatarImage src={form.avatar} alt={form.name} />
           ) : (
             <AvatarFallback className="text-xl">
-              {getInitials(supplier.name)}
+              {getInitials(form.name)}
             </AvatarFallback>
           )}
         </Avatar>
 
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{supplier.name}</h1>
+            <h1 className="text-2xl font-bold">{form.name}</h1>
             <Badge
-              variant={supplier.status === "active" ? "default" : "secondary"}
+              variant={form.status === "active" ? "default" : "secondary"}
               className={
-                supplier.status === "active"
+                form.status === "active"
                   ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
                   : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
               }
             >
-              {supplier.status === "active" ? "Active" : "Inactive"}
+              {form.status === "active" ? "Active" : "Inactive"}
             </Badge>
           </div>
-          <p className="text-lg text-muted-foreground">{supplier.company}</p>
+          <p className="text-lg text-muted-foreground">{form.company}</p>
           <div className="flex items-center gap-1 text-yellow-500">
             <StarIcon className="h-4 w-4 fill-current" />
 
-            <span className="font-medium">{supplier.rating}</span>
+            <span className="font-medium">{form.rating}</span>
             <span className="text-muted-foreground text-sm">/ 5.0</span>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm pt-2">
             <div className="flex items-center gap-1">
               <MailIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{supplier.email}</span>
+              <span>{form.email}</span>
             </div>
             <div className="flex items-center gap-1">
               <PhoneIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{supplier.phone}</span>
+              <span>{form.phone}</span>
             </div>
             <div className="flex items-center gap-1">
               <MapPinIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>{supplier.address}</span>
+              <span>{form.address}</span>
             </div>
             <div className="flex items-center gap-1">
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
 
-              <span>Joined {formatDate(supplier.joinedDate)}</span>
+              <span>Joined {formatDate(form.joinedDate)}</span>
             </div>
           </div>
         </div>
@@ -180,7 +240,7 @@ export default function SupplierProfilePage() {
         <div className="flex flex-col items-end gap-2">
           <div className="text-sm text-muted-foreground">Total Purchases</div>
           <div className="text-2xl font-bold">
-            {formatCurrency(supplier.totalPurchases)}
+            {formatCurrency(form.totalPurchases)}
           </div>
         </div>
       </div>
@@ -199,7 +259,7 @@ export default function SupplierProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {supplier.capabilities.map((capability) => (
+                {form.capabilities.map((capability) => (
                   <div
                     key={capability.id}
                     className="border rounded-lg p-4 hover:bg-accent/10 transition-colors"
@@ -223,7 +283,7 @@ export default function SupplierProfilePage() {
 
         <TabsContent value="transactions" className="space-y-6 mt-6">
           <SupplierTransactionHistoryChart
-            transactions={supplier.transactions}
+            transactions={form.transactions}
           />
 
           <Card>
@@ -240,8 +300,8 @@ export default function SupplierProfilePage() {
                   <div>Status</div>
                 </div>
                 <div className="divide-y">
-                  {supplier.transactions.length > 0 ? (
-                    supplier.transactions.map((transaction) => (
+                  {form.transactions.length > 0 ? (
+                    form.transactions.map((transaction) => (
                       <div
                         key={transaction.id}
                         className="grid grid-cols-5 p-3 text-sm"
@@ -285,6 +345,126 @@ export default function SupplierProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <div className="max-w-4xl mx-auto py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="outline" onClick={() => navigate('/suppliers')}>Back to list</Button>
+          <Avatar className="h-16 w-16">
+            {form.avatar ? (
+              <AvatarImage src={form.avatar} alt={form.name} />
+            ) : (
+              <AvatarFallback>{form.name.charAt(0)}</AvatarFallback>
+            )}
+          </Avatar>
+          <h2 className="text-2xl font-bold">{form.name}</h2>
+        </div>
+        <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+          <div>
+            <label className="font-medium">Name *</label>
+            <Input name="name" value={form.name} onChange={handleChange} required />
+          </div>
+          <div>
+            <label className="font-medium">Commercial name</label>
+            <Input name="company" value={form.company} onChange={handleChange} />
+          </div>
+          <div>
+            <label className="font-medium">Size</label>
+            <Select value={form.size} onValueChange={v => handleDropdown("size", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {SIZE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="font-medium flex-1">ISO 9001:2015</label>
+            <input type="checkbox" name="iso9001" checked={!!form.iso9001} onChange={handleChange} />
+            <label className="font-medium flex-1">IATF</label>
+            <input type="checkbox" name="iatf" checked={!!form.iatf} onChange={handleChange} />
+          </div>
+          <div>
+            <label className="font-medium">Link web</label>
+            <Input name="email" value={form.email} onChange={handleChange} />
+          </div>
+          <div>
+            <label className="font-medium">Supplier Type</label>
+            <Select value={form.supplierType} onValueChange={v => handleDropdown("supplierType", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPLIER_TYPE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="font-medium">Core Capacity</label>
+            <Select value={form.coreCapacity} onValueChange={v => handleDropdown("coreCapacity", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {CORE_CAPACITY_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="font-medium">Full address</label>
+            <Input name="address" value={form.address} onChange={handleChange} />
+          </div>
+          <div>
+            <label className="font-medium">State</label>
+            <Select value={form.state} onValueChange={v => handleDropdown("state", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="font-medium">Zip</label>
+            <Input name="zip" value={form.zip} onChange={handleChange} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="font-medium">Presentation</label>
+            {form.presentation && form.presentation.endsWith('.pdf') ? (
+              <iframe
+                className="mt-2 w-full h-64 border rounded"
+                src={form.presentation}
+                title="PDF Preview"
+              />
+            ) : form.presentation ? (
+              <a href={form.presentation} target="_blank" rel="noopener noreferrer" className="text-primary underline">View File</a>
+            ) : null}
+          </div>
+          <div className="col-span-1 md:col-span-2 flex gap-2 mt-4">
+            <Button type="submit" variant="default">Save</Button>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this supplier? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

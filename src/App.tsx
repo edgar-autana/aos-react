@@ -13,8 +13,21 @@ import CreateRfqPage from "@/polymet/pages/create-rfq-page";
 import RfqDetailsPageUpdated from "@/polymet/pages/rfq-details-page-updated";
 import PartAnalysisPage from "@/polymet/pages/part-analysis-page";
 import PartDetailsPage from "@/polymet/pages/part-details-page";
+import ContactsPage from "@/polymet/components/contacts-page";
+import ContactProfilePage from "@/polymet/components/contact-profile-page";
+import { useState } from "react";
+import { SUPPLIERS } from "@/polymet/data/suppliers-data";
+import { CUSTOMERS } from "@/polymet/data/customers-data";
+
+const initialContacts = [
+  { id: "1", name: "Surya", lastName: "Konidela", linkedin: "", source: "", tag: "", email: "surya@example.com", phone: "+52", company: "Pfeiffer Vacuum", provider: "", position: "", image: "", mainContact: false, supplier: "" },
+  // ... add more demo contacts as needed
+];
 
 export default function CncOrderTrackerPrototype() {
+  const [contacts, setContacts] = useState(initialContacts);
+  const [suppliers, setSuppliers] = useState(SUPPLIERS);
+  const [customers, setCustomers] = useState(CUSTOMERS);
   return (
     <Router>
       <Routes>
@@ -49,7 +62,7 @@ export default function CncOrderTrackerPrototype() {
           path="/customers"
           element={
             <AppLayout>
-              <CustomersPage />
+              <CustomersPage customers={customers} setCustomers={setCustomers} />
             </AppLayout>
           }
         />
@@ -58,7 +71,7 @@ export default function CncOrderTrackerPrototype() {
           path="/customers/:customerId"
           element={
             <AppLayout>
-              <CustomerProfilePage />
+              <CustomerProfilePage customers={customers} setCustomers={setCustomers} />
             </AppLayout>
           }
         />
@@ -67,7 +80,7 @@ export default function CncOrderTrackerPrototype() {
           path="/suppliers"
           element={
             <AppLayout>
-              <SuppliersPage />
+              <SuppliersPage suppliers={suppliers} setSuppliers={setSuppliers} />
             </AppLayout>
           }
         />
@@ -76,7 +89,7 @@ export default function CncOrderTrackerPrototype() {
           path="/suppliers/:supplierId"
           element={
             <AppLayout>
-              <SupplierProfilePage />
+              <SupplierProfilePage suppliers={suppliers} setSuppliers={setSuppliers} />
             </AppLayout>
           }
         />
@@ -180,6 +193,33 @@ export default function CncOrderTrackerPrototype() {
           element={
             <AppLayout>
               <PlaceholderPage title="Help & Support" />
+            </AppLayout>
+          }
+        />
+
+        <Route
+          path="/contacts"
+          element={
+            <AppLayout>
+              <ContactsPage contacts={contacts} setContacts={setContacts} />
+            </AppLayout>
+          }
+        />
+
+        <Route
+          path="/contacts/new"
+          element={
+            <AppLayout>
+              <ContactProfilePage contacts={contacts} setContacts={setContacts} />
+            </AppLayout>
+          }
+        />
+
+        <Route
+          path="/contacts/:contactId"
+          element={
+            <AppLayout>
+              <ContactProfilePage contacts={contacts} setContacts={setContacts} />
             </AppLayout>
           }
         />
