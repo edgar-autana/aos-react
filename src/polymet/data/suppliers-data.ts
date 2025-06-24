@@ -28,6 +28,16 @@ export interface Supplier {
   rating: number;
   capabilities: SupplierCapability[];
   transactions: SupplierTransaction[];
+  contactsCount?: number;
+  iso9001?: boolean;
+  iatf?: boolean;
+  type?: string;
+  size?: string;
+  presentation?: string;
+  state?: string;
+  zip?: string;
+  supplierType?: string;
+  coreCapacity?: string;
 }
 
 export const SUPPLIERS: Supplier[] = [
@@ -90,6 +100,16 @@ export const SUPPLIERS: Supplier[] = [
         materialType: "Tool Steel",
       },
     ],
+    contactsCount: 1,
+    iso9001: true,
+    iatf: false,
+    type: "Tolling",
+    size: "Large",
+    presentation: "",
+    state: "CDMX",
+    zip: "12345",
+    supplierType: "Manufacturer",
+    coreCapacity: "Aluminum Die Casting",
   },
   {
     id: "sup-002",
