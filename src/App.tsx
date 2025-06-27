@@ -17,9 +17,9 @@ import ContactsPage from "@/polymet/components/contacts-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
 import { useState } from "react";
 import { SUPPLIERS } from "@/polymet/data/suppliers-data";
-import { CUSTOMERS } from "@/polymet/data/customers-data";
+import { Contact } from "@/polymet/components/contacts-page";
 
-const initialContacts = [
+const initialContacts: Contact[] = [
   { id: "1", name: "Surya", lastName: "Konidela", linkedin: "", source: "", tag: "", email: "surya@example.com", phone: "+52", company: "Pfeiffer Vacuum", provider: "", position: "", image: "", mainContact: false, supplier: "" },
   // ... add more demo contacts as needed
 ];
@@ -27,7 +27,6 @@ const initialContacts = [
 export default function CncOrderTrackerPrototype() {
   const [contacts, setContacts] = useState(initialContacts);
   const [suppliers, setSuppliers] = useState(SUPPLIERS);
-  const [customers, setCustomers] = useState(CUSTOMERS);
   return (
     <Router>
       <Routes>
@@ -62,7 +61,7 @@ export default function CncOrderTrackerPrototype() {
           path="/customers"
           element={
             <AppLayout>
-              <CustomersPage customers={customers} setCustomers={setCustomers} />
+              <CustomersPage />
             </AppLayout>
           }
         />
@@ -71,7 +70,7 @@ export default function CncOrderTrackerPrototype() {
           path="/customers/:customerId"
           element={
             <AppLayout>
-              <CustomerProfilePage customers={customers} setCustomers={setCustomers} />
+              <CustomerProfilePage />
             </AppLayout>
           }
         />

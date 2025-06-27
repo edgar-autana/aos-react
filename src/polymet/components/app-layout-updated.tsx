@@ -15,6 +15,7 @@ import {
   FileTextIcon,
   ClipboardIcon,
   Contact,
+  FactoryIcon,
 } from "lucide-react";
 
 interface AppLayoutProps {
@@ -118,21 +119,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center">
+        <div className="px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden mr-2"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               <MenuIcon className="h-5 w-5" />
             </Button>
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-semibold">C</span>
+                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg hidden sm:inline-block">
+              <span className="font-bold text-xl">
                 CNC Order Tracker
               </span>
             </Link>
@@ -163,11 +164,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }`}
         >
           <div className="h-16 border-b flex items-center justify-between px-4 md:hidden">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-semibold">C</span>
+                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">CNC Order Tracker</span>
+              <span className="font-bold text-xl">CNC Order Tracker</span>
             </Link>
             <Button
               variant="ghost"
