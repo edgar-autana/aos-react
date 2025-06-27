@@ -17,5 +17,13 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, './src/lib'),
       '(components)': path.resolve(__dirname, './src/(components)'),
     }
+  },
+  optimizeDeps: {
+    exclude: ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-arm64', '@rollup/rollup-darwin-x64']
+  },
+  build: {
+    rollupOptions: {
+      external: ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-arm64', '@rollup/rollup-darwin-x64']
+    }
   }
 })

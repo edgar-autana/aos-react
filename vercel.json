@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm ci --omit=optional --prefer-offline --no-audit",
+  "installCommand": "npm install --omit=optional --prefer-offline --no-audit --no-optional",
   "framework": "vite"
 } 
