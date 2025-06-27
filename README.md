@@ -52,3 +52,81 @@ export default tseslint.config({
   },
 })
 ```
+
+# AOS React
+
+A React application with Supabase integration for customer and supplier management.
+
+## Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Create a `.env` file in the root directory with your Supabase credentials:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+3. Set up your Supabase database with the following table:
+
+### tb_company table
+```sql
+CREATE TABLE tb_company (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  id_atos TEXT,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at_atos TIMESTAMP WITH TIME ZONE,
+  url TEXT,
+  phone TEXT,
+  presentation TEXT,
+  status TEXT,
+  enabled BOOLEAN DEFAULT true,
+  slug TEXT,
+  address TEXT,
+  image TEXT,
+  nda_signed DATE,
+  hs_company_id TEXT
+);
+```
+
+4. Run the development server:
+```bash
+npm run dev
+```
+
+## Architecture
+
+The application follows a clean architecture pattern with Supabase integration:
+
+- **`src/lib/supabase.ts`**: Supabase client configuration and TypeScript types
+- **`src/services/company/companyApi.ts`**: Supabase API service layer with CRUD operations
+- **`src/hooks/company/useCompanies.ts`**: Custom React hooks for data management
+- **`src/utils/company/companyTransformers.ts`**: Data transformation utilities between database and UI formats
+
+## Features
+
+- Customer management with CRUD operations
+- Real-time data from Supabase
+- Responsive UI with shadcn/ui components
+- Search and filtering capabilities
+- Transaction history tracking
+
+## Supabase Integration
+
+The app uses Supabase for:
+- Database operations (CRUD)
+- Real-time subscriptions
+- Authentication (ready to implement)
+- File storage (ready to implement)
+
+All database operations are performed directly through the Supabase client using the pattern:
+```typescript
+const { data, error } = await supabase
+  .from('tb_company')
+  .select('*')
+```

@@ -38,14 +38,6 @@ export default function CreateRfqPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // In a real application, you would send this data to your backend
-    console.log({
-      name: rfqName,
-      customerId: selectedCustomerId,
-      dueDate,
-      files: uploadedFiles,
-    });
-
     // Navigate to the RFQs list page after successful creation
     // In a real app, you might navigate to the newly created RFQ's detail page
     navigate("/rfqs");

@@ -1,19 +1,20 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
-  MailIcon,
   PhoneIcon,
   MapPinIcon,
   CalendarIcon,
+  GlobeIcon,
+  Building2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CUSTOMERS } from "@/polymet/data/customers-data";
-import TransactionHistoryChart from "@/polymet/components/transaction-history-chart";
+import { companyApi } from "@/services/company/companyApi";
+import { Company } from "@/lib/supabase";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -25,66 +26,86 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
+import { formatUrl } from "@/utils/urlUtils";
+import { formatDate } from "@/utils/dateUtils";
+import { PageLoading } from "@/components/ui/loading";
 
-interface CustomerProfilePageProps {
-  customers: typeof CUSTOMERS;
-  setCustomers: React.Dispatch<React.SetStateAction<typeof CUSTOMERS>>;
-}
-
-export default function CustomerProfilePage({ customers, setCustomers }: CustomerProfilePageProps) {
+export default function CustomerProfilePage() {
   const { customerId } = useParams();
   const navigate = useNavigate();
-  const customer = customers.find((c) => c.id === customerId);
-  const [form, setForm] = useState<typeof CUSTOMERS[number]>(customer!);
+  const [customer, setCustomer] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<Partial<Company>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!customer) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Customer Not Found</h1>
-        <p className="text-muted-foreground mb-6">
-          The customer you're looking for doesn't exist or has been removed.
-        </p>
-        <Button variant="outline" onClick={() => navigate('/customers')}>
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Customers
-        </Button>
-      </div>
-    );
-  }
+  // Fetch customer data by ID
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      if (!customerId) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await companyApi.getById(customerId);
+        
+        if (response.error) {
+          setError(response.error);
+        } else if (response.data) {
+          setCustomer(response.data);
+          setForm(response.data);
+        } else {
+          setError("Customer not found");
+        }
+      } catch (err) {
+        setError("Failed to load customer data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
-  };
+    fetchCustomer();
+  }, [customerId]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setAvatarFile(e.target.files[0]);
-      setForm(f => ({ ...f, avatar: URL.createObjectURL(e.target.files![0]) }));
+      setForm(f => ({ ...f, image: URL.createObjectURL(e.target.files![0]) }));
     }
   };
 
-  const handleSave = () => {
-    setCustomers(prev => prev.map(c => c.id === customerId ? form : c));
-    navigate('/customers');
+  const handleSave = async () => {
+    if (!customerId) return;
+    
+    try {
+      const response = await companyApi.update(customerId, form);
+      
+      if (response.error) {
+        setError(response.error);
+      } else if (response.data) {
+        setCustomer(response.data);
+        setForm(response.data);
+      }
+    } catch (err) {
+      setError("Failed to update customer");
+    }
   };
 
-  const handleDelete = () => {
-    setCustomers(prev => prev.filter(c => c.id !== customerId));
-    navigate('/customers');
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const handleDelete = async () => {
+    if (!customerId) return;
+    
+    try {
+      const response = await companyApi.delete(customerId);
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
+        navigate('/customers');
+      }
+    } catch (err) {
+      setError("Failed to delete customer");
+    }
   };
 
   // Format date
@@ -95,15 +116,6 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
       month: "short",
       day: "numeric",
     });
-  };
-
-  // Get initials for avatar fallback
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
   };
 
   // Demo stats (replace with real data as needed)
@@ -120,8 +132,28 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
   const rfqHistory = [
     { name: 'Busch - Torrevac', partNumbers: 6, status: 'Pendiente por Revisar', capacity: 'CNC', created: '21-May-2025' },
     { name: 'Busch - 5602011', partNumbers: 4, status: 'RFQ creado(s)', capacity: 'CNC', created: '15-Apr-2025' },
-    // ... more rows ...
   ];
+
+  // Loading state
+  if (loading) {
+    return <PageLoading text="Loading customer data..." />;
+  }
+
+  // Error state
+  if (error || !customer) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <h1 className="text-2xl font-bold mb-4">Customer Not Found</h1>
+        <p className="text-muted-foreground mb-6">
+          {error || "The customer you're looking for doesn't exist or has been removed."}
+        </p>
+        <Button variant="outline" onClick={() => navigate('/customers')}>
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to Customers
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -133,13 +165,13 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
 
       {/* Customer header */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
-        <div className="relative">
-          <Avatar className="h-20 w-20 border">
-            {form.avatar ? (
-              <AvatarImage src={form.avatar} alt={form.name} />
+        <div className="relative group">
+          <Avatar className="h-20 w-20 border cursor-pointer transition-all duration-200 group-hover:opacity-80">
+            {form.image ? (
+              <AvatarImage src={form.image} alt={form.name || 'Company'} />
             ) : (
               <AvatarFallback className="text-xl">
-                {getInitials(form.name)}
+                <Building2Icon className="h-8 w-8 text-muted-foreground" />
               </AvatarFallback>
             )}
           </Avatar>
@@ -150,166 +182,128 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
             className="hidden"
             onChange={handleAvatarChange}
           />
-          <Button size="sm" variant="outline" className="absolute bottom-0 right-0" onClick={() => fileInputRef.current?.click()}>
-            Upload
-          </Button>
+          <div 
+            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
         </div>
 
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{form.name}</h1>
+            <h1 className="text-2xl font-bold">{form.name || 'Unnamed Company'}</h1>
             <Badge
-              variant={form.status === "active" ? "default" : "secondary"}
+              variant={form.enabled ? "default" : "secondary"}
               className={
-                form.status === "active"
+                form.enabled
                   ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
                   : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
               }
             >
-              {form.status === "active" ? "Active" : "Inactive"}
+              {form.enabled ? "Active" : "Inactive"}
             </Badge>
+            {form.nda_signed && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                NDA Signed
+              </Badge>
+            )}
           </div>
-          <p className="text-lg text-muted-foreground">{form.company}</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm pt-2">
-            <div className="flex items-center gap-1">
-              <MailIcon className="h-4 w-4 text-muted-foreground" />
-
-              <span>{form.email}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-
-              <span>{form.phone}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-
-              <span>{form.address}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-
-              <span>Joined {formatDate(form.joinedDate)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <div className="text-sm text-muted-foreground">Total Spent</div>
-          <div className="text-2xl font-bold">
-            {formatCurrency(form.totalSpent)}
+            {form.phone && (
+              <div className="flex items-center gap-1">
+                <PhoneIcon className="h-4 w-4 text-muted-foreground" />
+                <span>{form.phone}</span>
+              </div>
+            )}
+            {form.address && (
+              <div className="flex items-center gap-1">
+                <MapPinIcon className="h-4 w-4 text-muted-foreground" />
+                <span>{form.address}</span>
+              </div>
+            )}
+            {form.url && (
+              <div className="flex items-center gap-1">
+                <GlobeIcon className="h-4 w-4 text-muted-foreground" />
+                <a 
+                  href={formatUrl(form.url)} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {form.url}
+                </a>
+              </div>
+            )}
+            {form.created_at && (
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span>Created {formatDate(form.created_at)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Customer content */}
-      <Tabs defaultValue="transactions" className="mt-6">
+      <Tabs defaultValue="details" className="mt-6">
         <TabsList className="grid w-full grid-cols-2 md:w-auto">
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="details">Customer Details</TabsTrigger>
+          <TabsTrigger value="details">Company Details</TabsTrigger>
+          <TabsTrigger value="stats">Statistics</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="transactions" className="space-y-6 mt-6">
-          <TransactionHistoryChart transactions={form.transactions} />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-5 bg-muted/50 p-3 text-sm font-medium">
-                  <div>Date</div>
-                  <div>Order #</div>
-                  <div>Project</div>
-                  <div>Amount</div>
-                  <div>Status</div>
-                </div>
-                <div className="divide-y">
-                  {form.transactions.length > 0 ? (
-                    form.transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="grid grid-cols-5 p-3 text-sm"
-                      >
-                        <div>{formatDate(transaction.date)}</div>
-                        <div>
-                          <Link
-                            to={`/orders/${transaction.orderNumber}`}
-                            className="text-primary hover:underline"
-                          >
-                            {transaction.orderNumber}
-                          </Link>
-                        </div>
-                        <div>{transaction.projectName}</div>
-                        <div>{formatCurrency(transaction.amount)}</div>
-                        <div>
-                          <Badge
-                            variant="outline"
-                            className={
-                              transaction.status === "completed"
-                                ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
-                                : transaction.status === "pending"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/20"
-                                  : transaction.status === "cancelled"
-                                    ? "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/20"
-                                    : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/20"
-                            }
-                          >
-                            {transaction.status.charAt(0).toUpperCase() +
-                              transaction.status.slice(1)}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No transactions found for this customer
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="details" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
+                <CardTitle>Company Information</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="space-y-4">
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Full Name
+                      Company Name
                     </dt>
-                    <dd className="text-sm">{form.name}</dd>
+                    <dd className="text-sm">{form.name || 'N/A'}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Company
+                      Description
                     </dt>
-                    <dd className="text-sm">{form.company}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Email
-                    </dt>
-                    <dd className="text-sm">{form.email}</dd>
+                    <dd className="text-sm">{form.description || 'N/A'}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Phone
                     </dt>
-                    <dd className="text-sm">{form.phone}</dd>
+                    <dd className="text-sm">{form.phone || 'N/A'}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
                       Address
                     </dt>
-                    <dd className="text-sm">{form.address}</dd>
+                    <dd className="text-sm">{form.address || 'N/A'}</dd>
+                  </div>
+                  <div className="flex flex-col">
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      Website
+                    </dt>
+                    <dd className="text-sm">
+                      {form.url ? (
+                        <a 
+                          href={formatUrl(form.url)} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {form.url}
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
+                    </dd>
                   </div>
                 </dl>
               </CardContent>
@@ -323,9 +317,9 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
                 <dl className="space-y-4">
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Customer ID
+                      Company ID
                     </dt>
-                    <dd className="text-sm">{form.id}</dd>
+                    <dd className="text-sm">{form.id || 'N/A'}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
@@ -333,45 +327,101 @@ export default function CustomerProfilePage({ customers, setCustomers }: Custome
                     </dt>
                     <dd className="text-sm">
                       <Badge
-                        variant={
-                          form.status === "active" ? "default" : "secondary"
-                        }
+                        variant={form.enabled ? "default" : "secondary"}
                         className={
-                          form.status === "active"
+                          form.enabled
                             ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
                             : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
                         }
                       >
-                        {form.status === "active" ? "Active" : "Inactive"}
+                        {form.enabled ? "Active" : "Inactive"}
                       </Badge>
                     </dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Join Date
+                      Created Date
                     </dt>
                     <dd className="text-sm">
-                      {formatDate(form.joinedDate)}
+                      {form.created_at ? formatDate(form.created_at) : 'N/A'}
                     </dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Total Transactions
+                      Slug
                     </dt>
-                    <dd className="text-sm">{form.transactions.length}</dd>
+                    <dd className="text-sm">{form.slug || 'N/A'}</dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      Total Spent
+                      NDA Status
                     </dt>
                     <dd className="text-sm">
-                      {formatCurrency(form.totalSpent)}
+                      {form.nda_signed ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                          Signed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                          Not Signed
+                        </Badge>
+                      )}
                     </dd>
                   </div>
                 </dl>
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="stats" className="space-y-6 mt-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {stats.map((stat) => (
+              <Card key={stat.label}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent RFQ History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <div className="grid grid-cols-5 bg-muted/50 p-3 text-sm font-medium">
+                  <div>Name</div>
+                  <div>Part Numbers</div>
+                  <div>Status</div>
+                  <div>Capacity</div>
+                  <div>Created</div>
+                </div>
+                <div className="divide-y">
+                  {rfqHistory.map((rfq, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-5 p-3 text-sm"
+                    >
+                      <div>{rfq.name}</div>
+                      <div>{rfq.partNumbers}</div>
+                      <div>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                          {rfq.status}
+                        </Badge>
+                      </div>
+                      <div>{rfq.capacity}</div>
+                      <div>{rfq.created}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
