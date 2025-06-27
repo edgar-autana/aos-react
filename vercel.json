@@ -1,6 +1,9 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install --omit=optional --prefer-offline --no-audit --no-optional",
-  "framework": "vite"
+  "installCommand": "npm install --omit=optional --prefer-offline --no-audit --no-optional --ignore-scripts",
+  "framework": "vite",
+  "env": {
+    "ROLLUP_SKIP_NATIVE": "true"
+  }
 } 

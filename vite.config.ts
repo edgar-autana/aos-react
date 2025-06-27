@@ -25,5 +25,8 @@ export default defineConfig({
     rollupOptions: {
       external: ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-arm64', '@rollup/rollup-darwin-x64']
     }
+  },
+  define: {
+    'process.env.ROLLUP_SKIP_NATIVE': 'true'
   }
 })
