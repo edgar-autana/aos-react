@@ -5,5 +5,11 @@
   "framework": "vite",
   "env": {
     "ROLLUP_SKIP_NATIVE": "true"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 } 
