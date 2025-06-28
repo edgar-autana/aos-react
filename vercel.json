@@ -1,11 +1,9 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm ci --prefer-offline --no-audit",
+  "installCommand": "npm install --prefer-offline --no-audit",
   "framework": "vite",
-  "functions": {
-    "src/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
+  "env": {
+    "ROLLUP_SKIP_NATIVE": "true"
   }
 } 
