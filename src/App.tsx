@@ -1,5 +1,6 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import AppLayout from "@/polymet/components/app-layout-updated";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { SignIn, SignUp } from "@clerk/clerk-react";
+import AppLayout from "@/polymet/components/app-layout";
 import DashboardPage from "@/polymet/components/dashboard-page";
 import OrdersPage from "@/polymet/components/orders-page";
 import OrderDetailsPage from "@/polymet/components/order-details-page";
@@ -16,224 +17,295 @@ import PartDetailsPage from "@/polymet/pages/part-details-page";
 import ContactsPage from "@/polymet/components/contacts-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
 import { useState } from "react";
-import { SUPPLIERS } from "@/polymet/data/suppliers-data";
-import { Contact } from "@/polymet/components/contacts-page";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import type { Contact } from "@/polymet/components/contacts-page";
 
-const initialContacts: Contact[] = [
-  { id: "1", name: "Surya", lastName: "Konidela", linkedin: "", source: "", tag: "", email: "surya@example.com", phone: "+52", company: "Pfeiffer Vacuum", provider: "", position: "", image: "", mainContact: false, supplier: "" },
-  // ... add more demo contacts as needed
-];
+// Auth Layout Component
+function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function CncOrderTrackerPrototype() {
-  const [contacts, setContacts] = useState(initialContacts);
-  const [suppliers, setSuppliers] = useState(SUPPLIERS);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <AppLayout>
-              <DashboardPage />
-            </AppLayout>
-          }
-        />
+    <>
+      <Router>
+        <Routes>
+          {/* Public Auth Routes */}
+          <Route
+            path="/sign-in"
+            element={
+              <AuthLayout>
+                <SignIn 
+                  appearance={{
+                    elements: {
+                      rootBox: "mx-auto",
+                      card: "shadow-lg"
+                    }
+                  }}
+                  redirectUrl="/"
+                />
+              </AuthLayout>
+            }
+          />
+          
+          <Route
+            path="/sign-up"
+            element={
+              <AuthLayout>
+                <SignUp 
+                  appearance={{
+                    elements: {
+                      rootBox: "mx-auto",
+                      card: "shadow-lg"
+                    }
+                  }}
+                  redirectUrl="/"
+                />
+              </AuthLayout>
+            }
+          />
 
-        <Route
-          path="/orders"
-          element={
-            <AppLayout>
-              <OrdersPage />
-            </AppLayout>
-          }
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute permission={["org:view:dashboard", "org:all:access"]}>
+                <AppLayout>
+                  <DashboardPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/orders/:orderId"
-          element={
-            <AppLayout>
-              <OrderDetailsPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute permission={["org:all:access", "org:view:dashboard", "org:view:orders"]}>
+                <AppLayout>
+                  <OrdersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/customers"
-          element={
-            <AppLayout>
-              <CustomersPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/orders/:orderId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <OrderDetailsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/customers/:customerId"
-          element={
-            <AppLayout>
-              <CustomerProfilePage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/customers"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <CustomersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/suppliers"
-          element={
-            <AppLayout>
-              <SuppliersPage suppliers={suppliers} setSuppliers={setSuppliers} />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/customers/:customerId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <CustomerProfilePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/suppliers/:supplierId"
-          element={
-            <AppLayout>
-              <SupplierProfilePage suppliers={suppliers} setSuppliers={setSuppliers} />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/suppliers"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <SuppliersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/technical-analysis"
-          element={
-            <AppLayout>
-              <TechnicalAnalysisPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/suppliers/:supplierId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <SupplierProfilePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* RFQ Routes */}
-        <Route
-          path="/rfqs"
-          element={
-            <AppLayout>
-              <RfqsPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/technical-analysis"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <TechnicalAnalysisPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/rfqs/create"
-          element={
-            <AppLayout>
-              <CreateRfqPage />
-            </AppLayout>
-          }
-        />
+          {/* RFQ Routes */}
+          <Route
+            path="/rfqs"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <RfqsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/rfqs/:rfqId"
-          element={
-            <AppLayout>
-              <RfqDetailsPageUpdated />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/rfqs/create"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <CreateRfqPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* New Part Details Route */}
-        <Route
-          path="/rfqs/:rfqId/parts/:partId"
-          element={
-            <AppLayout>
-              <PartDetailsPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/rfqs/:rfqId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <RfqDetailsPageUpdated />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/rfqs/:rfqId/parts/:partId/analyze"
-          element={
-            <AppLayout>
-              <PartAnalysisPage />
-            </AppLayout>
-          }
-        />
+          {/* New Part Details Route */}
+          <Route
+            path="/rfqs/:rfqId/parts/:partId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PartDetailsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/rfqs/:rfqId/parts/:partId/analysis"
-          element={
-            <AppLayout>
-              <PartDetailsPage />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/rfqs/:rfqId/parts/:partId/analyze"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PartAnalysisPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* New Bid Routes */}
-        <Route
-          path="/rfqs/:rfqId/bids/:bidId"
-          element={
-            <AppLayout>
-              <PlaceholderPage title="Bid Details" />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/rfqs/:rfqId/parts/:partId/analysis"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PartDetailsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/rfqs/:rfqId/competitions/:competitionId"
-          element={
-            <AppLayout>
-              <PlaceholderPage title="Bidding Competition Details" />
-            </AppLayout>
-          }
-        />
+          {/* New Bid Routes */}
+          <Route
+            path="/rfqs/:rfqId/bids/:bidId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PlaceholderPage title="Bid Details" />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Placeholder routes for future development */}
-        <Route
-          path="/settings"
-          element={
-            <AppLayout>
-              <PlaceholderPage title="Settings" />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/rfqs/:rfqId/competitions/:competitionId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PlaceholderPage title="Bidding Competition Details" />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/help"
-          element={
-            <AppLayout>
-              <PlaceholderPage title="Help & Support" />
-            </AppLayout>
-          }
-        />
+          {/* Placeholder routes for future development */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PlaceholderPage title="Settings" />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/contacts"
-          element={
-            <AppLayout>
-              <ContactsPage contacts={contacts} setContacts={setContacts} />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/help"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PlaceholderPage title="Help & Support" />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/contacts/new"
-          element={
-            <AppLayout>
-              <ContactProfilePage contacts={contacts} setContacts={setContacts} />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <ContactsPage contacts={contacts} setContacts={setContacts} />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/contacts/:contactId"
-          element={
-            <AppLayout>
-              <ContactProfilePage contacts={contacts} setContacts={setContacts} />
-            </AppLayout>
-          }
-        />
+          <Route
+            path="/contacts/:contactId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <ContactProfilePage contacts={contacts} setContacts={setContacts} />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallback route */}
-        <Route
-          path="*"
-          element={
-            <AppLayout>
-              <NotFoundPage />
-            </AppLayout>
-          }
-        />
-      </Routes>
-    </Router>
+          {/* Catch all route - redirect to dashboard */}
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+        </Routes>
+      </Router>
+    </>
   );
 }
 
@@ -242,17 +314,6 @@ function PlaceholderPage({ title }: { title: string }) {
     <div className="flex flex-col items-center justify-center py-12">
       <h1 className="text-2xl font-bold mb-4">{title}</h1>
       <p className="text-muted-foreground">This page is under construction.</p>
-    </div>
-  );
-}
-
-function NotFoundPage() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
-      <p className="text-muted-foreground">
-        The page you're looking for doesn't exist or has been moved.
-      </p>
     </div>
   );
 }

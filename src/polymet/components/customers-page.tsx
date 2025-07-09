@@ -10,6 +10,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useCompanies } from "@/hooks/company/useCompanies";
 import { formatUrl } from "@/utils/urlUtils";
 import { TableLoading } from "@/components/ui/loading";
+import AddCustomerModal from "./add-customer-modal";
 
 export default function CustomersPage() {
   const { companies, loading, error, searchCompanies } = useCompanies();
@@ -18,6 +19,7 @@ export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [tableLoading, setTableLoading] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Customers</h1>
-        <Button>
+        <Button onClick={() => setAddModalOpen(true)}>
           <PlusIcon className="h-4 w-4 mr-2" />
           Add Customer
         </Button>
@@ -258,6 +260,12 @@ export default function CustomersPage() {
           />
         </>
       )}
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+      />
     </div>
   );
 }
