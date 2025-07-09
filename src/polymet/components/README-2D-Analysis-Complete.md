@@ -23,7 +23,7 @@ The 2D analysis system provides automated extraction of part information from te
 
 #### 2. OCR Processing (`/api/ocr/process`)
 - **Purpose**: Extract text from PDF/images using OCR Space API
-- **Configuration**: Uses your OCR Space API key (`f1f68ea46a88957`)
+- **Configuration**: Uses your OCR Space API key (`key`)
 - **Features**:
   - Structured text extraction with spatial relationships
   - Paragraph grouping and positioning
@@ -32,7 +32,7 @@ The 2D analysis system provides automated extraction of part information from te
 
 #### 3. AI Analysis (`/api/assistant/analyze-2d`)
 - **Purpose**: Process OCR text with OpenAI Assistant
-- **Configuration**: Uses OpenAI Assistant ID (`asst_57pPyhjXgD5z8K5XhMGn0x91`)
+- **Configuration**: Uses OpenAI Assistant ID (`key`)
 - **Features**:
   - Structured JSON response matching your prompt
   - Process type classification (CNC/Casting/Unknown)
@@ -85,7 +85,7 @@ AWS_REGION=us-east-2
 BUCKET_NAME=wer24-files
 
 # OCR Configuration (already in code)
-OCR_API_KEY=f1f68ea46a88957
+OCR_API_KEY=key
 
 # OpenAI Configuration (needed)
 OPENAI_API_KEY=your_openai_api_key
@@ -93,7 +93,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 ### API Keys and IDs
 
-- **OCR Space API Key**: `f1f68ea46a88957` (already configured)
+- **OCR Space API Key**: `key` (already configured)
 - **OpenAI Assistant ID**: `asst_57pPyhjXgD5z8K5XhMGn0x91` (already configured)
 - **AWS Credentials**: Already configured in the code
 
