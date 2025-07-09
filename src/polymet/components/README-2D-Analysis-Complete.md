@@ -79,11 +79,8 @@ FileUploadZone → S3Service → OCRSpaceAPI → OpenAIAssistant → TwoDAnalysi
 
 ```env
 # AWS Configuration (already in code)
-AWS_REGION=us-east-2
-BUCKET_NAME=wer24-files
 
 # OCR Configuration (already in code)
-OCR_API_KEY=key
 
 # OpenAI Configuration (needed)
 OPENAI_API_KEY=your_openai_api_key
