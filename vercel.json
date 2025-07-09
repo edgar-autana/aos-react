@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install --prefer-offline --no-audit",
+  "framework": "vite",
+  "env": {
+    "ROLLUP_SKIP_NATIVE": "true"
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+} 

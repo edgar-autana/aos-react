@@ -1,180 +1,271 @@
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { SearchIcon, PlusIcon, Building2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button";
-import { SearchIcon, FilterIcon, UsersIcon } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CUSTOMERS } from "@/polymet/data/customers-data";
-import CustomerListItem from "@/polymet/components/customer-list-item";
-import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useCompanies } from "@/hooks/company/useCompanies";
+import { formatUrl } from "@/utils/urlUtils";
+import { TableLoading } from "@/components/ui/loading";
+import AddCustomerModal from "./add-customer-modal";
 
-export default function CustomersPage({ customers, setCustomers }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const navigate = useNavigate();
+export default function CustomersPage() {
+  const { companies, loading, error, searchCompanies } = useCompanies();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
-  // Filter customers based on search query and status filter
-  const filteredCustomers = CUSTOMERS.filter((customer) => {
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase());
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 2);
 
-    const matchesStatus =
-      statusFilter === "all" || customer.status === statusFilter;
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-    return matchesSearch && matchesStatus;
-  });
+  // Handle search with loading state
+  useEffect(() => {
+    setTableLoading(true);
+    searchCompanies(debouncedSearchTerm).finally(() => {
+      setTableLoading(false);
+    });
+  }, [debouncedSearchTerm, searchCompanies]);
+
+  // Pagination logic
+  const paginatedCompanies = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return companies.slice(startIndex, endIndex);
+  }, [companies, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(companies.length / pageSize);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Customers</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-red-500">Error loading customers: {error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Customers</h1>
-        <p className="text-muted-foreground">
-          Manage your customers and view their transaction history
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Customers</h1>
+        <Button onClick={() => setAddModalOpen(true)}>
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Add Customer
+        </Button>
       </div>
 
-      {/* Search and filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{companies.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {companies.filter((c) => c.enabled).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {companies.filter((c) => !c.enabled).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">With NDA Signed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {companies.filter((c) => c.nda_signed).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
+      {/* Search Controls */}
+      <div className="flex items-center justify-between space-x-4">
+        <div className="relative flex-1 max-w-sm">
+          <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search customers..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-8"
           />
         </div>
-
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" size="icon">
-            <FilterIcon className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
-      {/* Customers stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Customers</p>
-              <h3 className="text-2xl font-bold">{CUSTOMERS.length}</h3>
-            </div>
-            <div className="bg-primary/10 p-2 rounded-full">
-              <UsersIcon className="h-5 w-5 text-primary" />
-            </div>
-          </div>
+      {/* Error Display */}
+      {error && (
+        <div className="text-center py-4">
+          <div className="text-red-500">Error loading customers: {error}</div>
         </div>
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Active Customers</p>
-              <h3 className="text-2xl font-bold">
-                {CUSTOMERS.filter((c) => c.status === "active").length}
-              </h3>
-            </div>
-            <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
-              <UsersIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Inactive Customers
-              </p>
-              <h3 className="text-2xl font-bold">
-                {CUSTOMERS.filter((c) => c.status === "inactive").length}
-              </h3>
-            </div>
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full">
-              <UsersIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Revenue</p>
-              <h3 className="text-2xl font-bold">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 0,
-                }).format(
-                  CUSTOMERS.reduce(
-                    (sum, customer) => sum + customer.totalSpent,
-                    0
-                  )
-                )}
-              </h3>
-            </div>
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
-              <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Customers list */}
-      <div className="overflow-x-auto border rounded-lg bg-background">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
-              {/* ...other columns... */}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {filteredCustomers.length > 0 ? (
-              filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-muted">
-                  <td className="px-4 py-2 whitespace-nowrap flex items-center gap-2">
-                    <span onClick={() => navigate(`/customers/${customer.id}`)} className="cursor-pointer">
-                      <Avatar className="h-8 w-8">
-                        {customer.avatar ? (
-                          <AvatarImage src={customer.avatar} alt={customer.name} />
-                        ) : (
-                          <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
-                        )}
-                      </Avatar>
-                    </span>
-                    <span>{customer.name}</span>
-                  </td>
-                  {/* ...other columns... */}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No customers found matching your criteria
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Table and Pagination with Loading */}
+      {(loading || tableLoading) ? (
+        <TableLoading />
+      ) : (
+        <>
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-4 font-medium"></th>
+                      <th className="text-left p-4 font-medium">Name</th>
+                      <th className="text-left p-4 font-medium">URL</th>
+                      <th className="text-left p-4 font-medium">Phone</th>
+                      <th className="text-left p-4 font-medium">NDA Signed</th>
+                      <th className="text-left p-4 font-medium">Address</th>
+                      <th className="text-left p-4 font-medium">Slug</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paginatedCompanies.length > 0 ? (
+                      paginatedCompanies.map((company) => (
+                        <tr key={company.id} className="hover:bg-muted/50">
+                          <td className="p-4">
+                            <Link to={`/customers/${company.id}`}>
+                              {company.image ? (
+                                <Avatar className="h-10 w-10 border cursor-pointer hover:opacity-80 transition-opacity">
+                                  <AvatarImage src={company.image} alt={company.name || 'Company'} />
+                                  <AvatarFallback>
+                                    <Building2Icon className="h-5 w-5" />
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border cursor-pointer hover:opacity-80 transition-opacity">
+                                  <Building2Icon className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              )}
+                            </Link>
+                          </td>
+                          <td className="p-4">
+                            <Link
+                              to={`/customers/${company.id}`}
+                              className="font-medium hover:text-primary transition-colors"
+                            >
+                              {company.name || 'Unnamed Company'}
+                            </Link>
+                          </td>
+                          <td className="p-4 text-sm">
+                            {company.url ? (
+                              <a
+                                href={formatUrl(company.url)}
+                                target="_blank"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                {company.url}
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">No URL</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-sm">
+                            {company.phone || <span className="text-muted-foreground">No phone</span>}
+                          </td>
+                          <td className="p-4">
+                            {company.nda_signed ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800">
+                                Yes
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                No
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="p-4 text-sm">
+                            {company.address || <span className="text-muted-foreground">No address</span>}
+                          </td>
+                          <td className="p-4 text-sm">
+                            {company.slug || <span className="text-muted-foreground">no-slug</span>}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8">
+                          <div className="text-muted-foreground">
+                            {searchTerm ? "No customers found matching your search." : "No customers found."}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={companies.length}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </>
+      )}
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+      />
     </div>
   );
 }
