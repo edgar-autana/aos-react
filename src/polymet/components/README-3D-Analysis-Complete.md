@@ -98,7 +98,6 @@ FileUploadZone → S3Service → AutanaAI API → ThreeDAnalysisResult
 
 ```env
 # AWS Configuration (already in code)
-AWS_REGION=us-east-2
 BUCKET_NAME=wer24-files
 
 # 3D Analysis API (configured in code)

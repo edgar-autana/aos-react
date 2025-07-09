@@ -2,8 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import AWS from 'aws-sdk';
 
 // AWS Configuration - matching your Python code
-const AWS_ACCESS_KEY = "AKIAXTLDLWRLP3KFDQLO";
-const AWS_SECRET_KEY = "MQzeN5uI9YIJmgTdgZB/4R8G++dQ3o9xLF61Qprs";
+//const AWS_ACCESS_KEY = "";
+const AWS_SECRET_KEY = "";
 const AWS_REGION = "us-east-2";
 const BUCKET_NAME = "wer24-files";
 
