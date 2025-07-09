@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
@@ -30,20 +30,12 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { PageLoading } from "@/components/ui/loading";
 import { formatDate } from "@/utils/dateUtils";
-
-const CORE_CAPACITY_OPTIONS = [
-  "Aluminum Die Casting",
-  "CNC Machining",
-  "Injection Molding",
-  "Sheet Metal",
-];
-const SUPPLIER_TYPE_OPTIONS = ["Tolling", "Manufacturer", "Distributor"];
-const SIZE_OPTIONS = ["Small", "Medium", "Large"];
-const STATE_OPTIONS = ["CDMX", "Jalisco", "Nuevo León", "Querétaro", "Estado de México"];
+import { supplierApi } from "@/services/supplier/supplierApi";
+import SupplierDetailsForm from "./supplier-details-form";
+import { s3Service, validateImageFile } from "@/lib/s3";
 
 export default function SupplierProfilePage() {
   const { supplierId } = useParams();
@@ -53,7 +45,10 @@ export default function SupplierProfilePage() {
   const [form, setForm] = useState<Partial<Supplier>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch supplier data
   useEffect(() => {
@@ -82,26 +77,46 @@ export default function SupplierProfilePage() {
     fetchSupplier();
   }, [supplierId, getSupplierById]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setForm(f => ({ ...f, [name]: checked }));
-    } else {
-      setForm(f => ({ ...f, [name]: value }));
-    }
-  };
-
-  const handleSave = async () => {
+  const handleFormSubmit = async (formData: any) => {
     if (!supplierId) return;
     
+    setSaveLoading(true);
+    setError(null);
+    
     try {
-      const success = await updateSupplier(supplierId, form);
-      if (success) {
-        navigate('/suppliers');
+      // Prepare data for Supabase tb_supplier table
+      const apiData = {
+        name: formData.name,
+        comercial_name: formData.comercial_name || null,
+        description: formData.description || null,
+        link_web: formData.link_web || null,
+        phone: formData.phone || null,
+        full_address: formData.full_address || null,
+        zip: formData.zip || null,
+        state: formData.state || null,
+        type: formData.type || null,
+        size: formData.size || null,
+        capacity: formData.type || null, // Save supplier type to capacity field
+        enabled: formData.enabled,
+        iso_9001_2015: formData.iso_9001_2015,
+        iatf: formData.iatf,
+        first_contact: formData.first_contact ? formData.first_contact.toISOString() : null,
+      };
+      
+      const response = await supplierApi.update(supplierId, apiData);
+      
+      if (response.error) {
+        setError(response.error);
+      } else if (response.data) {
+        setSupplier(response.data);
+        setForm(response.data);
       }
     } catch (err) {
-      setError("Failed to update supplier");
+      const errorMessage = err instanceof Error ? err.message : "Failed to update supplier";
+      setError(errorMessage);
+      console.error('Exception during supplier update:', err);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -109,12 +124,68 @@ export default function SupplierProfilePage() {
     if (!supplierId) return;
     
     try {
-      const success = await deleteSupplier(supplierId);
-      if (success) {
+      const response = await supplierApi.delete(supplierId);
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
         navigate('/suppliers');
       }
     } catch (err) {
       setError("Failed to delete supplier");
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !supplierId) return;
+    
+    const file = e.target.files[0];
+    
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid image file');
+      return;
+    }
+    
+    setImageUploading(true);
+    setError(null);
+    
+    try {
+      // Upload image to S3 using supplier-specific folder structure
+      const uploadResult = await s3Service.uploadSupplierImage(file, supplierId);
+      
+      if (!uploadResult.success) {
+        setError(uploadResult.error || 'Failed to upload image');
+        return;
+      }
+      
+      // Update supplier image URL in database
+      const updateData = { image: uploadResult.url };
+      const response = await supplierApi.update(supplierId, updateData);
+      
+      if (response.error) {
+        setError(response.error);
+        // If database update fails, clean up uploaded file
+        if (uploadResult.key) {
+          await s3Service.deleteFile(uploadResult.key);
+        }
+      } else if (response.data) {
+        // Update local state with new image URL
+        setSupplier(response.data);
+        setForm(response.data);
+      }
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to upload image";
+      setError(errorMessage);
+      console.error('Avatar upload error:', err);
+    } finally {
+      setImageUploading(false);
+      // Reset file input
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
 
@@ -162,15 +233,39 @@ export default function SupplierProfilePage() {
 
       {/* Supplier header */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
-        <Avatar className="h-20 w-20 border">
-          {form.image ? (
-            <AvatarImage src={form.image} alt={form.name} />
+        <div className="relative group">
+          <Avatar className="h-20 w-20 border cursor-pointer transition-all duration-200 group-hover:opacity-80">
+            {form.image ? (
+              <AvatarImage src={form.image} alt={form.name || 'Supplier'} />
+            ) : (
+              <AvatarFallback className="text-xl">
+                <Building2Icon className="h-8 w-8 text-muted-foreground" />
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg,.gif,.webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+            disabled={imageUploading}
+          />
+          {imageUploading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
           ) : (
-            <AvatarFallback className="text-xl">
-              <Building2Icon className="h-8 w-8" />
-            </AvatarFallback>
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
           )}
-        </Avatar>
+        </div>
 
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
@@ -228,112 +323,25 @@ export default function SupplierProfilePage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={loading}>
-            Save Changes
-          </Button>
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">Delete</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete this supplier? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+
       </div>
 
       {/* Supplier details */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="details">Supplier Detail</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Name</label>
-                  <p className="text-sm text-muted-foreground">{supplier.name}</p>
-                </div>
-                {supplier.comercial_name && (
-                  <div>
-                    <label className="text-sm font-medium">Commercial Name</label>
-                    <p className="text-sm text-muted-foreground">{supplier.comercial_name}</p>
-                  </div>
-                )}
-                {supplier.link_web && (
-                  <div>
-                    <label className="text-sm font-medium">Website</label>
-                    <a
-                      href={supplier.link_web}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {supplier.link_web}
-                    </a>
-                  </div>
-                )}
-                {supplier.description && (
-                  <div>
-                    <label className="text-sm font-medium">Description</label>
-                    <p className="text-sm text-muted-foreground">{supplier.description}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {supplier.phone && (
-                  <div>
-                    <label className="text-sm font-medium">Phone</label>
-                    <p className="text-sm text-muted-foreground">{supplier.phone}</p>
-                  </div>
-                )}
-                {supplier.full_address && (
-                  <div>
-                    <label className="text-sm font-medium">Address</label>
-                    <p className="text-sm text-muted-foreground">{supplier.full_address}</p>
-                  </div>
-                )}
-                {supplier.state && (
-                  <div>
-                    <label className="text-sm font-medium">State</label>
-                    <p className="text-sm text-muted-foreground">{supplier.state}</p>
-                  </div>
-                )}
-                {supplier.zip && (
-                  <div>
-                    <label className="text-sm font-medium">ZIP Code</label>
-                    <p className="text-sm text-muted-foreground">{supplier.zip}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        <TabsContent value="details" className="space-y-6">
+          <SupplierDetailsForm
+            supplier={supplier}
+            onSubmit={handleFormSubmit}
+            isLoading={saveLoading}
+          />
         </TabsContent>
 
-        <TabsContent value="details" className="space-y-6">
+        <TabsContent value="analytics" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -402,144 +410,30 @@ export default function SupplierProfilePage() {
             </Card>
           </div>
         </TabsContent>
-
-        <TabsContent value="edit" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Name</label>
-                  <Input
-                    name="name"
-                    value={form.name || ''}
-                    onChange={handleChange}
-                    placeholder="Supplier name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Commercial Name</label>
-                  <Input
-                    name="comercial_name"
-                    value={form.comercial_name || ''}
-                    onChange={handleChange}
-                    placeholder="Commercial name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Website</label>
-                  <Input
-                    name="link_web"
-                    value={form.link_web || ''}
-                    onChange={handleChange}
-                    placeholder="https://example.com"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Phone</label>
-                  <Input
-                    name="phone"
-                    value={form.phone || ''}
-                    onChange={handleChange}
-                    placeholder="Phone number"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Type</label>
-                  <select
-                    name="type"
-                    value={form.type || ''}
-                    onChange={handleChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select type</option>
-                    {SUPPLIER_TYPE_OPTIONS.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Size</label>
-                  <select
-                    name="size"
-                    value={form.size || ''}
-                    onChange={handleChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select size</option>
-                    {SIZE_OPTIONS.map(size => (
-                      <option key={size} value={size}>{size}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">State</label>
-                  <select
-                    name="state"
-                    value={form.state || ''}
-                    onChange={handleChange}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select state</option>
-                    {STATE_OPTIONS.map(state => (
-                      <option key={state} value={state}>{state}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Address</label>
-                  <Input
-                    name="full_address"
-                    value={form.full_address || ''}
-                    onChange={handleChange}
-                    placeholder="Full address"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="enabled"
-                    checked={form.enabled || false}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label className="text-sm font-medium">Active</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="iso_9001_2015"
-                    checked={form.iso_9001_2015 || false}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label className="text-sm font-medium">ISO 9001:2015</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="iatf"
-                    checked={form.iatf || false}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label className="text-sm font-medium">IATF</label>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
+
+      {/* Delete Button */}
+      <div className="flex gap-2 mt-6">
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+              Delete Supplier
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this supplier? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }

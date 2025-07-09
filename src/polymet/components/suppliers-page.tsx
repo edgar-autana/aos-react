@@ -16,6 +16,7 @@ import {
   getSupplierStatusText,
   formatSupplierPhone,
 } from "@/utils/supplier/supplierUtils";
+import AddSupplierModal from "./add-supplier-modal";
 
 export default function SuppliersPage() {
   const { suppliers, loading, error, searchSuppliers } = useSuppliers();
@@ -24,6 +25,7 @@ export default function SuppliersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [tableLoading, setTableLoading] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function SuppliersPage() {
         <div>
           <h1 className="text-3xl font-bold">Suppliers</h1>
         </div>
-        <Button>
+        <Button onClick={() => setAddModalOpen(true)}>
           <PlusIcon className="h-4 w-4 mr-2" />
           Add Supplier
         </Button>
@@ -292,6 +294,12 @@ export default function SuppliersPage() {
           />
         </>
       )}
+
+      {/* Add Supplier Modal */}
+      <AddSupplierModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+      />
     </div>
   );
 }
