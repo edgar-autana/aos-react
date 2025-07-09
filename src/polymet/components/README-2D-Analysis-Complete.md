@@ -83,7 +83,6 @@ FileUploadZone → S3Service → OCRSpaceAPI → OpenAIAssistant → TwoDAnalysi
 # OCR Configuration (already in code)
 
 # OpenAI Configuration (needed)
-OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### API Keys and IDs
