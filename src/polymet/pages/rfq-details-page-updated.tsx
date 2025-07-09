@@ -64,7 +64,6 @@ export default function RfqDetailsPageUpdated() {
     closingDate: Date;
     suppliers: string[];
   }) => {
-    console.log("Creating competition with data:", data);
     // In a real app, this would call an API to create the competition
     setCreateCompetitionModalOpen(false);
     // For demo purposes, we could show a success message or refresh the data
