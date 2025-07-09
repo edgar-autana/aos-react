@@ -2,10 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import AWS from 'aws-sdk';
 
 // AWS Configuration - using environment variables
-const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID;
-const AWS_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-const AWS_REGION = process.env.AWS_REGION || "us-east-2";
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "wer24-files";
+const AWS_ACCESS_KEY = import.meta.env.AWS_ACCESS_KEY_ID;
+const AWS_SECRET_KEY = import.meta.env.AWS_SECRET_ACCESS_KEY;
+const AWS_REGION = import.meta.env.AWS_REGION || "us-east-2";
+const BUCKET_NAME = import.meta.env.S3_BUCKET_NAME || "wer24-files";
 
 // Configure AWS
 AWS.config.update({
