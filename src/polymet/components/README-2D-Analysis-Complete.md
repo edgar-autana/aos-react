@@ -79,8 +79,6 @@ FileUploadZone → S3Service → OCRSpaceAPI → OpenAIAssistant → TwoDAnalysi
 
 ```env
 # AWS Configuration (already in code)
-AWS_ACCESS_KEY_ID=AKIAXTLDLWRLP3KFDQLO
-AWS_SECRET_ACCESS_KEY=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
 AWS_REGION=us-east-2
 BUCKET_NAME=wer24-files
 

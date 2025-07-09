@@ -98,8 +98,6 @@ FileUploadZone → S3Service → AutanaAI API → ThreeDAnalysisResult
 
 ```env
 # AWS Configuration (already in code)
-AWS_ACCESS_KEY_ID=AKIAXTLDLWRLP3KFDQLO
-AWS_SECRET_ACCESS_KEY=key
 AWS_REGION=us-east-2
 BUCKET_NAME=wer24-files
 
