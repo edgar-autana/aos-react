@@ -143,6 +143,15 @@ export const s3Service = {
     });
   },
 
+  // Upload supplier profile image
+  async uploadSupplierImage(file: File, supplierId: string): Promise<UploadResponse> {
+    return this.uploadFile({
+      file,
+      folder: `suppliers/${supplierId}/profile`,
+      contentType: file.type
+    });
+  },
+
   // Delete file from S3
   async deleteFile(key: string): Promise<boolean> {
     try {
