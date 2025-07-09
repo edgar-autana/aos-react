@@ -14,7 +14,11 @@ import {
   BuildingIcon,
   FileTextIcon,
   ClipboardIcon,
+  Contact,
+  FactoryIcon,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -24,6 +28,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const location = useLocation();
+  const { hasPermission } = usePermissions();
 
   // Check if the path matches the current location
   const isActive = (path: string) => {
@@ -70,86 +75,99 @@ export default function AppLayout({ children }: AppLayoutProps) {
       name: "Dashboard",
       path: "/",
       icon: <LayoutDashboardIcon className="h-5 w-5" />,
+      permissions: ["org:view:dashboard", "org:all:access"],
     },
     {
       name: "Orders",
       path: "/orders",
       icon: <ClipboardListIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "RFQs",
       path: "/rfqs",
       icon: <ClipboardIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
+    },
+    {
+      name: "Contacts",
+      path: "/contacts",
+      icon: <Contact className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "Customers",
       path: "/customers",
       icon: <UsersIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "Suppliers",
       path: "/suppliers",
       icon: <BuildingIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "Technical Analysis",
       path: "/technical-analysis",
       icon: <FileTextIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "Settings",
       path: "/settings",
       icon: <SettingsIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
     {
       name: "Help",
       path: "/help",
       icon: <HelpCircleIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
     },
   ];
+
+  const visibleNavItems = navItems.filter(item =>
+    !item.permissions || item.permissions.some(perm => hasPermission(perm))
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b bg-gradient-to-r from-primary/10 via-background to-primary/5 dark:from-primary/20 dark:via-background dark:to-primary/10">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between bg-[url('https://picsum.photos/seed/cnc123/1920/100')] bg-opacity-5 bg-blend-overlay">
-          <div className="flex items-center">
+      <header className="border-b bg-card">
+        <div className="px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden mr-2 hover:bg-primary/10 transition-colors"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               <MenuIcon className="h-5 w-5" />
             </Button>
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20 group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300 transform group-hover:scale-105">
-                <span className="text-primary-foreground font-bold text-lg">
-                  C
-                </span>
+            <Link to="/" className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg hidden sm:inline-block bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 group-hover:from-primary/90 group-hover:to-primary transition-all duration-300">
+              <span className="font-bold text-xl">
                 CNC Order Tracker
               </span>
             </Link>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-muted-foreground hidden md:block animate-pulse">
-              <span className="font-medium text-primary">Live</span> | 5 active
-              orders
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleDarkMode}
-              className="hover:bg-primary/10 transition-colors"
-            >
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
               {isDarkMode ? (
-                <SunIcon className="h-5 w-5 text-amber-400" />
+                <SunIcon className="h-5 w-5" />
               ) : (
-                <MoonIcon className="h-5 w-5 text-indigo-600" />
+                <MoonIcon className="h-5 w-5" />
               )}
             </Button>
+            <SignedOut>
+              <SignInButton />
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
           </div>
         </div>
       </header>
@@ -158,7 +176,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Mobile menu overlay */}
         {isMobileMenuOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}
@@ -170,11 +188,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }`}
         >
           <div className="h-16 border-b flex items-center justify-between px-4 md:hidden">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <span className="text-primary-foreground font-semibold">C</span>
+            <Link to="/" className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">CNC Order Tracker</span>
+              <span className="font-bold text-xl">CNC Order Tracker</span>
             </Link>
             <Button
               variant="ghost"
@@ -186,12 +204,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
           <nav className="p-4">
             <ul className="space-y-2">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <li key={item.path}>
                   <Link to={item.path}>
                     <Button
                       variant={isActive(item.path) ? "secondary" : "ghost"}
-                      className="w-full justify-start hover:bg-primary/10 transition-colors"
+                      className="w-full justify-start"
                     >
                       {item.icon}
                       <span className="ml-3">{item.name}</span>

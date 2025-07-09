@@ -9,6 +9,7 @@ interface FileUploadZoneProps {
   icon: React.ReactNode;
   onFileChange: (file: File | null) => void;
   file: File | null;
+  disabled?: boolean;
 }
 
 export default function FileUploadZone({
@@ -17,23 +18,27 @@ export default function FileUploadZone({
   icon,
   onFileChange,
   file,
+  disabled = false,
 }: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -47,6 +52,7 @@ export default function FileUploadZone({
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0];
       if (validateFile(selectedFile)) {
@@ -72,6 +78,7 @@ export default function FileUploadZone({
   };
 
   const handleRemoveFile = () => {
+    if (disabled) return;
     onFileChange(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -79,6 +86,7 @@ export default function FileUploadZone({
   };
 
   const handleButtonClick = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
   };
 
@@ -86,8 +94,9 @@ export default function FileUploadZone({
     <div
       className={cn(
         "border-2 border-dashed rounded-lg p-6 transition-colors",
-        isDragging ? "border-primary bg-primary/5" : "border-border",
-        file ? "bg-secondary/50" : ""
+        isDragging && !disabled ? "border-primary bg-primary/5" : "border-border",
+        file ? "bg-secondary/50" : "",
+        disabled ? "opacity-50 cursor-not-allowed" : ""
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -99,6 +108,7 @@ export default function FileUploadZone({
         onChange={handleFileInputChange}
         accept={accept}
         className="hidden"
+        disabled={disabled}
       />
 
       <div className="flex flex-col items-center justify-center space-y-4">
@@ -121,6 +131,7 @@ export default function FileUploadZone({
                 size="icon"
                 onClick={handleRemoveFile}
                 className="h-8 w-8"
+                disabled={disabled}
               >
                 <XIcon className="h-4 w-4" />
               </Button>
@@ -136,7 +147,7 @@ export default function FileUploadZone({
               <p className="text-xs text-muted-foreground mb-4">
                 Drag and drop or click to upload
               </p>
-              <Button onClick={handleButtonClick} variant="secondary">
+              <Button onClick={handleButtonClick} variant="secondary" disabled={disabled}>
                 <UploadIcon className="h-4 w-4 mr-2" />
                 Select File
               </Button>

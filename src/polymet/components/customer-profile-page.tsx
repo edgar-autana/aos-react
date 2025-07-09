@@ -27,8 +27,9 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { formatUrl } from "@/utils/urlUtils";
-import { formatDate } from "@/utils/dateUtils";
 import { PageLoading } from "@/components/ui/loading";
+import CustomerDetailsForm from "./customer-details-form";
+import { s3Service, validateImageFile, validatePresentationFile } from "@/lib/s3";
 
 export default function CustomerProfilePage() {
   const { customerId } = useParams();
@@ -38,6 +39,9 @@ export default function CustomerProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Company>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch customer data by ID
@@ -69,28 +73,60 @@ export default function CustomerProfilePage() {
     fetchCustomer();
   }, [customerId]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setForm(f => ({ ...f, image: URL.createObjectURL(e.target.files![0]) }));
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !customerId) return;
+    
+    const file = e.target.files[0];
+    
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid image file');
+      return;
     }
-  };
-
-  const handleSave = async () => {
-    if (!customerId) return;
+    
+    setImageUploading(true);
+    setError(null);
     
     try {
-      const response = await companyApi.update(customerId, form);
+      // Upload image to S3
+      const uploadResult = await s3Service.uploadCompanyImage(file, customerId);
+      
+      if (!uploadResult.success) {
+        setError(uploadResult.error || 'Failed to upload image');
+        return;
+      }
+      
+      // Update company image URL in database
+      const updateData = { image: uploadResult.url };
+      const response = await companyApi.update(customerId, updateData);
       
       if (response.error) {
         setError(response.error);
+        // If database update fails, clean up uploaded file
+        if (uploadResult.key) {
+          await s3Service.deleteFile(uploadResult.key);
+        }
       } else if (response.data) {
+        // Update local state with new image URL
         setCustomer(response.data);
         setForm(response.data);
       }
+      
     } catch (err) {
-      setError("Failed to update customer");
+      const errorMessage = err instanceof Error ? err.message : "Failed to upload image";
+      setError(errorMessage);
+      console.error('Avatar upload error:', err);
+    } finally {
+      setImageUploading(false);
+      // Reset file input
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
+
+
 
   const handleDelete = async () => {
     if (!customerId) return;
@@ -105,6 +141,132 @@ export default function CustomerProfilePage() {
       }
     } catch (err) {
       setError("Failed to delete customer");
+    }
+  };
+
+  const handleRemovePresentation = async () => {
+    if (!customerId || !customer?.presentation) return;
+    
+    setSaveLoading(true);
+    setError(null);
+    
+    try {
+      // Extract the S3 key from the presentation URL
+      const presentationUrl = customer.presentation;
+      const bucketName = 'aos-files-bucket';
+      const region = 'us-east-1';
+      const baseUrl = `https://${bucketName}.s3.${region}.amazonaws.com/`;
+      
+      if (presentationUrl.startsWith(baseUrl)) {
+        const s3Key = presentationUrl.replace(baseUrl, '');
+        
+        // Remove from S3
+        const deleteSuccess = await s3Service.deleteFile(s3Key);
+        if (!deleteSuccess) {
+          console.warn('Failed to delete file from S3, but continuing with database update');
+        }
+      }
+      
+      // Remove presentation URL from database
+      const response = await companyApi.update(customerId, { presentation: "" });
+      
+      if (response.error) {
+        setError(response.error);
+      } else if (response.data) {
+        // Update local state
+        setCustomer(response.data);
+        setForm(response.data);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to remove presentation";
+      setError(errorMessage);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+    const handleFormSubmit = async (formData: any) => {
+    if (!customerId) return;
+    
+    setSaveLoading(true);
+    setError(null);
+    
+    try {
+      // Prepare data for Supabase tb_company table
+      const apiData = {
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description || null,
+        url: formData.url || null,
+        phone: formData.phone || null,
+        status: formData.status,
+        enabled: formData.enabled,
+        address: formData.address || null,
+        nda_signed: formData.nda_signed ? formData.nda_signed.toISOString() : null,
+      };
+      
+      
+      const response = await companyApi.update(customerId, apiData);
+      
+      if (response.error) {
+        setError(response.error);
+      } else if (response.data) {
+        setCustomer(response.data);
+        setForm(response.data);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update customer";
+      setError(errorMessage);
+      console.error('Exception during company update:', err);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handlePresentationUpload = async (file: File) => {
+    if (!customerId) return;
+    
+    setError(null);
+    
+    try {
+      // Validate presentation file
+      const validation = validatePresentationFile(file);
+      if (!validation.valid) {
+        setError(`Presentation file error: ${validation.error}`);
+        throw new Error(validation.error);
+      }
+      
+      // Upload presentation file to S3
+      const uploadResult = await s3Service.uploadCompanyPresentation(file, customerId);
+      
+      if (uploadResult.success) {
+        // Save presentation URL to database
+        const presentationData = { presentation: uploadResult.url };
+        const presentationResponse = await companyApi.update(customerId, presentationData);
+        
+        if (presentationResponse.error) {
+          setError(`Failed to save presentation URL: ${presentationResponse.error}`);
+          // Clean up uploaded file if database update fails
+          if (uploadResult.key) {
+            await s3Service.deleteFile(uploadResult.key);
+          }
+          throw new Error(presentationResponse.error);
+        } else if (presentationResponse.data) {
+          // Update local state with new presentation URL
+          setCustomer(presentationResponse.data);
+          setForm(presentationResponse.data);
+        }
+      } else {
+        console.error('Presentation upload failed:', uploadResult.error);
+        setError(`Failed to upload presentation: ${uploadResult.error}`);
+        throw new Error(uploadResult.error);
+      }
+    } catch (err) {
+      console.error('Presentation upload error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload presentation file';
+      setError(errorMessage);
+      throw err; // Re-throw to handle in the form component
     }
   };
 
@@ -178,23 +340,35 @@ export default function CustomerProfilePage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".png,.jpg,.jpeg"
+            accept=".png,.jpg,.jpeg,.gif,.webp"
             className="hidden"
             onChange={handleAvatarChange}
+            disabled={imageUploading}
           />
-          <div 
-            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
+          {imageUploading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{form.name || 'Unnamed Company'}</h1>
+            {form.status && (
+              <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                {form.status}
+              </Badge>
+            )}
             <Badge
               variant={form.enabled ? "default" : "secondary"}
               className={
@@ -208,6 +382,11 @@ export default function CustomerProfilePage() {
             {form.nda_signed && (
               <Badge variant="outline" className="bg-blue-100 text-blue-800">
                 NDA Signed
+              </Badge>
+            )}
+            {form.presentation && (
+              <Badge variant="outline" className="bg-green-100 text-green-800">
+                Presentation Available
               </Badge>
             )}
           </div>
@@ -255,123 +434,14 @@ export default function CustomerProfilePage() {
         </TabsList>
 
         <TabsContent value="details" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-4">
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Company Name
-                    </dt>
-                    <dd className="text-sm">{form.name || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Description
-                    </dt>
-                    <dd className="text-sm">{form.description || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Phone
-                    </dt>
-                    <dd className="text-sm">{form.phone || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Address
-                    </dt>
-                    <dd className="text-sm">{form.address || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Website
-                    </dt>
-                    <dd className="text-sm">
-                      {form.url ? (
-                        <a 
-                          href={formatUrl(form.url)} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          {form.url}
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="space-y-4">
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Company ID
-                    </dt>
-                    <dd className="text-sm">{form.id || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Status
-                    </dt>
-                    <dd className="text-sm">
-                      <Badge
-                        variant={form.enabled ? "default" : "secondary"}
-                        className={
-                          form.enabled
-                            ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/20"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-400 dark:hover:bg-gray-500/20"
-                        }
-                      >
-                        {form.enabled ? "Active" : "Inactive"}
-                      </Badge>
-                    </dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Created Date
-                    </dt>
-                    <dd className="text-sm">
-                      {form.created_at ? formatDate(form.created_at) : 'N/A'}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Slug
-                    </dt>
-                    <dd className="text-sm">{form.slug || 'N/A'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      NDA Status
-                    </dt>
-                    <dd className="text-sm">
-                      {form.nda_signed ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-800">
-                          Signed
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                          Not Signed
-                        </Badge>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-          </div>
+          <CustomerDetailsForm
+            company={customer as Company}
+            onSubmit={handleFormSubmit}
+            onCancel={() => setIsEditing(false)}
+            isLoading={saveLoading}
+            onPresentationUpload={handlePresentationUpload}
+            onPresentationRemove={handleRemovePresentation}
+          />
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-6 mt-6">
@@ -425,13 +495,12 @@ export default function CustomerProfilePage() {
         </TabsContent>
       </Tabs>
 
-      {/* Save/Delete Buttons */}
+      {/* Delete Button */}
       <div className="flex gap-2 mt-6">
-        <Button type="button" variant="default" onClick={handleSave}>Save</Button>
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogTrigger asChild>
             <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-              Delete
+              Delete Customer
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -447,7 +516,6 @@ export default function CustomerProfilePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button type="button" variant="outline" onClick={() => navigate('/customers')}>Back to list</Button>
       </div>
     </div>
   );

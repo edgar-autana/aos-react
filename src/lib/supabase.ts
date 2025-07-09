@@ -26,7 +26,7 @@ export interface Company {
   slug: string
   address: string
   image: string
-  nda_signed: string
+  nda_signed: string | null
   hs_company_id: string
 }
 
