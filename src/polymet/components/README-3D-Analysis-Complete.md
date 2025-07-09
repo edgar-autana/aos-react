@@ -94,15 +94,6 @@ FileUploadZone → S3Service → AutanaAI API → ThreeDAnalysisResult
 
 ## Configuration
 
-### Environment Variables
-
-```env
-# AWS Configuration (already in code)
-BUCKET_NAME=wer24-files
-
-# 3D Analysis API (configured in code)
-ANALYSIS_API_URL=https://api-3d.autana.ai/api/analyze
-```
 
 ### API Endpoints
 

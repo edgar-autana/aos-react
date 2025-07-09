@@ -77,19 +77,7 @@ FileUploadZone → S3Service → OCRSpaceAPI → OpenAIAssistant → TwoDAnalysi
 
 ### Environment Variables
 
-```env
-# AWS Configuration (already in code)
 
-# OCR Configuration (already in code)
-
-# OpenAI Configuration (needed)
-```
-
-### API Keys and IDs
-
-- **OCR Space API Key**: `key` (already configured)
-- **OpenAI Assistant ID**: `asst_57pPyhjXgD5z8K5XhMGn0x91` (already configured)
-- **AWS Credentials**: Already configured in the code
 
 ## Response Structure
 
