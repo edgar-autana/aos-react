@@ -1,29 +1,32 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InfoIcon } from "lucide-react";
+import { useRfqWithCompany } from "@/hooks/rfq/useRfqs";
+import { PageLoading } from "@/components/ui/loading";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import RfqEditForm from "./rfq-edit-form";
 
 interface RfqInfoTabProps {
   rfqId: string;
 }
 
 export default function RfqInfoTab({ rfqId }: RfqInfoTabProps) {
+  const { rfq, loading, error } = useRfqWithCompany(rfqId);
+
+  if (loading) {
+    return <PageLoading text="Loading RFQ details..." />;
+  }
+
+  if (error || !rfq) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {error || "Failed to load RFQ details"}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>RFQ Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12">
-            <InfoIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">RFQ Details & History</p>
-            <p className="text-sm text-muted-foreground text-center max-w-md">
-              Detailed RFQ information, history, documents, and additional metadata 
-              will be displayed here. This includes timeline, status changes, and 
-              related documentation.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <RfqEditForm rfq={rfq} />
     </div>
   );
 } 
