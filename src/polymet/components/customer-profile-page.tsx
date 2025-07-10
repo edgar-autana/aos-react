@@ -28,8 +28,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatUrl } from "@/utils/urlUtils";
 import { PageLoading } from "@/components/ui/loading";
-import CustomerDetailsForm from "./customer-details-form";
 import { s3Service, validateImageFile, validatePresentationFile } from "@/lib/s3";
+import CustomerDetailsTab from "./customer-details-tab";
+import CustomerStatsTab from "./customer-stats-tab";
+import CustomerRfqsTab from "./customer-rfqs-tab";
 
 export default function CustomerProfilePage() {
   const { customerId } = useParams();
@@ -126,8 +128,6 @@ export default function CustomerProfilePage() {
     }
   };
 
-
-
   const handleDelete = async () => {
     if (!customerId) return;
     
@@ -185,7 +185,7 @@ export default function CustomerProfilePage() {
     }
   };
 
-    const handleFormSubmit = async (formData: any) => {
+  const handleFormSubmit = async (formData: any) => {
     if (!customerId) return;
     
     setSaveLoading(true);
@@ -279,22 +279,6 @@ export default function CustomerProfilePage() {
       day: "numeric",
     });
   };
-
-  // Demo stats (replace with real data as needed)
-  const stats = [
-    { label: 'RFQs', value: 29 },
-    { label: 'Part Numbers', value: 157 },
-    { label: 'Quotes Sent', value: 87 },
-    { label: 'Purchase Orders', value: 0 },
-    { label: 'Pieces Quoted', value: 87.00 },
-    { label: 'Quoted Value', value: '$2M' },
-  ];
-
-  // Demo RFQ history (replace with real data as needed)
-  const rfqHistory = [
-    { name: 'Busch - Torrevac', partNumbers: 6, status: 'Pendiente por Revisar', capacity: 'CNC', created: '21-May-2025' },
-    { name: 'Busch - 5602011', partNumbers: 4, status: 'RFQ creado(s)', capacity: 'CNC', created: '15-Apr-2025' },
-  ];
 
   // Loading state
   if (loading) {
@@ -428,70 +412,28 @@ export default function CustomerProfilePage() {
 
       {/* Customer content */}
       <Tabs defaultValue="details" className="mt-6">
-        <TabsList className="grid w-full grid-cols-2 md:w-auto">
+        <TabsList className="grid w-full grid-cols-3 md:w-auto">
           <TabsTrigger value="details">Company Details</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="rfqs">RFQs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6 mt-6">
-          <CustomerDetailsForm
-            company={customer as Company}
-            onSubmit={handleFormSubmit}
-            onCancel={() => setIsEditing(false)}
-            isLoading={saveLoading}
+          <CustomerDetailsTab
+            customer={customer}
+            onFormSubmit={handleFormSubmit}
             onPresentationUpload={handlePresentationUpload}
             onPresentationRemove={handleRemovePresentation}
+            isLoading={saveLoading}
           />
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-6 mt-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {stats.map((stat) => (
-              <Card key={stat.label}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <CustomerStatsTab customerId={customerId!} />
+        </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent RFQ History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-5 bg-muted/50 p-3 text-sm font-medium">
-                  <div>Name</div>
-                  <div>Part Numbers</div>
-                  <div>Status</div>
-                  <div>Capacity</div>
-                  <div>Created</div>
-                </div>
-                <div className="divide-y">
-                  {rfqHistory.map((rfq, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-5 p-3 text-sm"
-                    >
-                      <div>{rfq.name}</div>
-                      <div>{rfq.partNumbers}</div>
-                      <div>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                          {rfq.status}
-                        </Badge>
-                      </div>
-                      <div>{rfq.capacity}</div>
-                      <div>{rfq.created}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="rfqs" className="space-y-6 mt-6">
+          <CustomerRfqsTab customerId={customerId!} />
         </TabsContent>
       </Tabs>
 
