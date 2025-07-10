@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableLoading } from "@/components/ui/loading";
+import { PlusIcon } from "lucide-react";
 import { useRfqsByCompanyPaginated } from "@/hooks/rfq/useRfqs";
 import { 
   getRfqDisplayName, 
@@ -12,12 +14,15 @@ import {
   getRfqPriorityColor, 
   getRfqPriorityText
 } from "@/utils/rfq/rfqUtils";
+import RfqCreateModal from "./rfq-create-modal";
 
 interface CustomerRfqsTabProps {
   customerId: string;
 }
 
 export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
   const {
     rfqs: customerRfqs,
     loading: rfqsLoading,
@@ -27,14 +32,25 @@ export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
     totalItems,
     totalPages,
     handlePageChange,
-    handlePageSizeChange
+    handlePageSizeChange,
+    refetch
   } = useRfqsByCompanyPaginated(customerId);
+
+  const handleCreateSuccess = () => {
+    refetch();
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>RFQs ({totalItems})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>RFQs ({totalItems})</CardTitle>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add RFQ
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {rfqsError && (
@@ -128,6 +144,14 @@ export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Create RFQ Modal */}
+      <RfqCreateModal
+        customerId={customerId}
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
 } 
