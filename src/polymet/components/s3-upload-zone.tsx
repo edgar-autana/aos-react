@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { UploadIcon, FileIcon, XIcon, CheckIcon, AlertCircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { s3Service } from "@/lib/s3";
 
 interface S3UploadZoneProps {
   accept: string;
@@ -134,51 +135,29 @@ export default function S3UploadZone({
     }));
 
     try {
-      // Get presigned URL
-      const presignedResponse = await fetch('/api/s3/presigned-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileType: file.type,
-          bucket: 'polymet-uploads',
-        }),
-      });
-
-      if (!presignedResponse.ok) {
-        throw new Error('Failed to get upload URL');
-      }
-
-      const { presignedUrl } = await presignedResponse.json();
+      // Update progress to show upload starting
       setUploadState(prev => ({ ...prev, progress: 25 }));
 
-      // Upload file
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+      // Use the existing s3Service for direct upload
+      const uploadResult = await s3Service.uploadFile({
+        file,
+        folder: 'technical-analysis',
+        contentType: file.type
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file');
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
       }
 
       setUploadState(prev => ({ ...prev, progress: 100 }));
       
-      // Extract file URL
-      const fileUrl = presignedUrl.split('?')[0];
-      
       setUploadState(prev => ({
         ...prev,
-        uploadedUrl: fileUrl,
+        uploadedUrl: uploadResult.url || null,
         isUploading: false,
       }));
 
-      onUploadComplete?.(fileUrl);
+      onUploadComplete?.(uploadResult.url);
 
     } catch (error) {
       console.error('S3 upload error:', error);
@@ -279,15 +258,7 @@ export default function S3UploadZone({
           </div>
         )}
 
-        {/* Upload Success */}
-        {uploadState.uploadedUrl && (
-          <div className="flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-            <CheckIcon className="h-5 w-5 text-green-500" />
-            <span className="text-sm text-green-700 dark:text-green-400">
-              File uploaded successfully!
-            </span>
-          </div>
-        )}
+
 
         {/* Error Display */}
         {(uploadState.error || uploadState.error) && (

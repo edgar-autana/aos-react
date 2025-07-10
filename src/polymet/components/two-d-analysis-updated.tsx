@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileTextIcon } from "lucide-react";
 import S3UploadZone from "./s3-upload-zone";
 
 interface TwoDAnalysisState {
@@ -37,15 +38,28 @@ export default function TwoDAnalysisUpdated() {
   };
 
   const handleUploadComplete = (fileUrl: string) => {
+    console.log('Upload complete, fileUrl:', fileUrl);
     setState(prev => ({
       ...prev,
       s3Url: fileUrl,
+      currentStep: 'idle',
+      progress: 0,
+    }));
+  };
+
+  const handleStartOCR = () => {
+    if (!state.s3Url) return;
+    
+    setState(prev => ({
+      ...prev,
       currentStep: 'processing',
       progress: 30,
+      isProcessing: true,
+      error: null,
     }));
     
     // Start 2D drawing analysis
-    process2DDrawing(fileUrl);
+    process2DDrawing(state.s3Url);
   };
 
   const process2DDrawing = async (fileUrl: string) => {
@@ -158,6 +172,91 @@ export default function TwoDAnalysisUpdated() {
             file={state.file}
             maxSize={15}
           />
+
+          {/* Uploaded File Display */}
+          {state.s3Url && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Uploaded 2D Drawing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <FileTextIcon className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-sm">2D CAD Drawing</p>
+                      <p className="text-xs text-muted-foreground">Successfully uploaded</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigator.clipboard.writeText(state.s3Url!)}
+                      className="h-8 px-3 text-xs"
+                    >
+                      Copy Link
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="h-8 px-3 text-xs"
+                    >
+                      <a href={state.s3Url} target="_blank" rel="noopener noreferrer">
+                        View
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Debug Info */}
+          <Card className="border-orange-300 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="text-sm">Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs space-y-1">
+                <div>s3Url: {state.s3Url ? '✅ Set' : '❌ Not set'}</div>
+                <div>isProcessing: {state.isProcessing ? '✅ True' : '❌ False'}</div>
+                <div>analysisResult: {state.analysisResult ? '✅ Set' : '❌ Not set'}</div>
+                <div>Button should show: {state.s3Url && !state.isProcessing && !state.analysisResult ? '✅ Yes' : '❌ No'}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* OCR Trigger Button */}
+          {state.s3Url && !state.isProcessing && !state.analysisResult && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">OCR Processing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                    <span className="text-2xl">🔍</span>
+                    <div>
+                      <p className="font-medium text-sm">Ready for OCR Analysis</p>
+                      <p className="text-xs text-muted-foreground">
+                        Click the button below to start text extraction and analysis
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleStartOCR}
+                    disabled={state.isProcessing}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <span className="mr-2">🔍</span>
+                    Start OCR Analysis
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Progress Section */}
           {state.isProcessing && (

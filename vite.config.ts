@@ -18,6 +18,26 @@ export default defineConfig({
       '(components)': path.resolve(__dirname, './src/(components)'),
     }
   },
+  server: {
+    proxy: {
+      '/api/3d/analyze': {
+        target: 'https://api-3d.autana.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/3d\/analyze/, '/api/analyze'),
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
+      }
+    }
+  },
   optimizeDeps: {
     exclude: ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-arm64', '@rollup/rollup-darwin-x64']
   },
