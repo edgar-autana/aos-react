@@ -13,7 +13,7 @@ export interface OCRPage {
 }
 
 export class OCRService {
-  private static readonly API_KEY = process.env.NEXT_PUBLIC_OCR_SPACE_API_KEY;
+  private static readonly API_KEY = process.env.NEXT_PUBLIC_OCR_SPACE_API_KEY || "f1f68ea46a88957";
   private static readonly API_URL = 'https://api.ocr.space/parse/image';
 
   static async extractText(fileUrl: string): Promise<OCRResult> {
