@@ -14,7 +14,7 @@ export interface RFQ {
   cancel_reason: string | null
   autana_cancel_reason: string | null
   autana_canceled_rfq: boolean | null
-  supplier: number | null
+  supplier: string | null // UUID reference to tb_supplier
   contact_company_1: string | null
   contact_company_2: string | null
   contact_supplier_1: string | null
@@ -59,7 +59,7 @@ export interface RFQPayload {
   cancel_reason?: string
   autana_cancel_reason?: string
   autana_canceled_rfq?: boolean
-  supplier?: number
+  supplier?: string // UUID reference to tb_supplier
   contact_company_1?: string
   contact_company_2?: string
   contact_supplier_1?: string
@@ -88,7 +88,7 @@ export interface RFQFilters {
   priority?: boolean
   assigned?: string
   enabled?: boolean
-  supplier?: number
+  supplier?: string // UUID reference to tb_supplier
   search?: string
   page?: number
   pageSize?: number
