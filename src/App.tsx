@@ -11,7 +11,7 @@ import SupplierProfilePage from "@/polymet/components/supplier-profile-page";
 import TechnicalAnalysisPage from "@/polymet/pages/technical-analysis-page";
 import RfqsPage from "@/polymet/pages/rfqs-page";
 import CreateRfqPage from "@/polymet/pages/create-rfq-page";
-import RfqDetailsPageUpdated from "@/polymet/pages/rfq-details-page-updated";
+import RfqDetailsPage from "@/polymet/pages/rfq-details-page";
 import PartAnalysisPage from "@/polymet/pages/part-analysis-page";
 import PartDetailsPage from "@/polymet/pages/part-details-page";
 import ContactsPage from "@/polymet/components/contacts-page";
@@ -190,7 +190,7 @@ export default function CncOrderTrackerPrototype() {
             element={
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
-                  <RfqDetailsPageUpdated />
+                  <RfqDetailsPage />
                 </AppLayout>
               </ProtectedRoute>
             }

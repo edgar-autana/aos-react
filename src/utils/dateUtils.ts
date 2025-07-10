@@ -63,3 +63,18 @@ export const isValidDate = (dateString: string): boolean => {
   const date = new Date(dateString);
   return date instanceof Date && !isNaN(date.getTime());
 }; 
+
+/**
+ * Format number with thousand separators
+ * @param num - The number to format
+ * @returns Formatted string with commas as thousand separators
+ */
+export const formatNumber = (num: number | string | null | undefined): string => {
+  if (num === null || num === undefined || num === '') return '—';
+  
+  const numValue = typeof num === 'string' ? parseFloat(num) : num;
+  
+  if (isNaN(numValue)) return '—';
+  
+  return numValue.toLocaleString('en-US');
+}; 
