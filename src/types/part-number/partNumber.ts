@@ -1,4 +1,5 @@
 export interface PartNumber {
+  id: string;
   id_atos: string;
   slug: number | null;
   company_atos: string | null;
@@ -36,11 +37,19 @@ export interface PartNumber {
   hs_deal_id: string | null;
   customer_status_global_quotation: string | null;
   remove_inbox: boolean;
+  part_drawing_2d: string | null; // 2D drawing file URL
+  part_drawing_3d: string | null; // 3D drawing file URL
+  reason_feasibility: string | null; // Reason for feasibility (when CAN NOT DO)
+  cavities: number | null; // Number of cavities
+  mold_life: number | null; // Mold life
+  runner: string | null; // Runner type
+  mold_steel_core: string | null; // Mold steel core type
 }
 
 export interface PartNumberPayload {
   slug?: number | null;
   company_atos?: string | null;
+  company?: string | null;
   rfq?: string | null;
   name?: string | null;
   part_name?: string | null;
@@ -74,11 +83,20 @@ export interface PartNumberPayload {
   hs_deal_id?: string | null;
   customer_status_global_quotation?: string | null;
   remove_inbox?: boolean;
+  part_drawing_2d?: string | null; // 2D drawing file URL
+  part_drawing_3d?: string | null; // 3D drawing file URL
+  reason_feasibility?: string | null; // Reason for feasibility (when CAN NOT DO)
+  cavities?: number | null; // Number of cavities
+  mold_life?: number | null; // Mold life
+  runner?: string | null; // Runner type
+  mold_steel_core?: string | null; // Mold steel core type
 }
 
 export interface PartNumberFilters {
+  id?: string;
   rfq?: string;
   company_atos?: string;
+  company?: string;
   status?: string;
   supplier?: number;
   enabled?: boolean;
