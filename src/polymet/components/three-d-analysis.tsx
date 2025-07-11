@@ -92,7 +92,7 @@ export default function ThreeDAnalysis() {
       setState(prev => ({ ...prev, progress: 50 }));
       
       // Call 3D model analysis service
-      const analysisResponse = await fetch('/api/3d/analyze', {
+      const analysisResponse = await fetch('https://autana-api.edgar-dev.com/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
