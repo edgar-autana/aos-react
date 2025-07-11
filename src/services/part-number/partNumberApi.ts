@@ -151,7 +151,7 @@ export const partNumberApi = {
       const { data, error } = await supabase
         .from('tb_part_number')
         .select('*')
-        .eq('id_atos', id)
+        .eq('id', id)
         .single();
 
       if (error) {
@@ -169,6 +169,8 @@ export const partNumberApi = {
   // Create new part number
   async create(partNumber: PartNumberPayload): Promise<ApiResponse<PartNumber>> {
     try {
+      console.log('Creating part number with payload:', partNumber);
+      
       const { data, error } = await supabase
         .from('tb_part_number')
         .insert([partNumber])
@@ -177,13 +179,27 @@ export const partNumberApi = {
 
       if (error) {
         console.error('Error creating part number:', error);
-        return { data: null, error: error.message };
+        console.error('Full error object:', JSON.stringify(error, null, 2));
+        
+        // Enhanced error messages for specific issues
+        let errorMessage = error.message || 'Failed to create part number';
+        
+        if (error.code === '22P02' && error.message.includes('uuid')) {
+          errorMessage = `Database schema error: Expected UUID but received URL. Field: ${error.message}`;
+        } else if (error.code === 'PGRST204') {
+          errorMessage = `Database schema error: Column not found - ${error.message}`;
+        } else if (error.code === '23505') {
+          errorMessage = 'A part number with this information already exists';
+        }
+        
+        return { data: null, error: errorMessage };
       }
 
       return { data, error: null };
     } catch (err) {
       console.error('Exception in create:', err);
-      return { data: null, error: 'Failed to create part number' };
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create part number';
+      return { data: null, error: errorMessage };
     }
   },
 
@@ -193,7 +209,7 @@ export const partNumberApi = {
       const { data, error } = await supabase
         .from('tb_part_number')
         .update(partNumber)
-        .eq('id_atos', id)
+        .eq('id', id)
         .select()
         .single();
 
@@ -215,7 +231,7 @@ export const partNumberApi = {
       const { error } = await supabase
         .from('tb_part_number')
         .delete()
-        .eq('id_atos', id);
+        .eq('id', id);
 
       if (error) {
         console.error('Error deleting part number:', error);

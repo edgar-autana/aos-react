@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,12 +9,15 @@ import { FileTextIcon, CalendarIcon, EyeIcon, PlusIcon, UserIcon } from "lucide-
 import { usePartNumbersByRfqPaginated } from "@/hooks/part-number/usePartNumbers";
 import { PartNumber } from "@/types/part-number/partNumber";
 import { formatNumber } from "@/utils/dateUtils";
+import PartNumberCreateModal from "./part-number-create-modal";
 
 interface RfqPnsTabProps {
   rfqId: string;
 }
 
 export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
   const {
     partNumbers,
     loading,
@@ -22,11 +27,12 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
     totalItems,
     totalPages,
     handlePageChange,
-    handlePageSizeChange
+    handlePageSizeChange,
+    refetch
   } = usePartNumbersByRfqPaginated(rfqId);
 
   const getPartNumberDisplayName = (partNumber: PartNumber): string => {
-    return partNumber.part_name || partNumber.slug_name || `PN-${partNumber.id_atos.slice(-6)}`;
+    return partNumber.part_name || partNumber.slug_name || `PN-${partNumber.id.slice(-6)}`;
   };
 
   const getMainProcessColor = (mainProcess: string | null): string => {
@@ -43,13 +49,17 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
     return processColors[process] || "bg-gray-100 text-gray-800";
   };
 
+  const handleCreateSuccess = () => {
+    refetch();
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Part Numbers ({totalItems})</CardTitle>
-            <Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               <PlusIcon className="h-4 w-4 mr-2" />
               Add Part Number
             </Button>
@@ -83,7 +93,7 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                   <tbody className="divide-y">
                     {partNumbers.length > 0 ? (
                       partNumbers.map((partNumber: PartNumber) => (
-                        <tr key={partNumber.id_atos} className="hover:bg-muted/50">
+                        <tr key={partNumber.id} className="hover:bg-muted/50">
                           <td className="p-4">
                             <div className="font-medium">{getPartNumberDisplayName(partNumber)}</div>
                           </td>
@@ -121,9 +131,11 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                           </td>
                           <td className="p-4">
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                <EyeIcon className="h-4 w-4 mr-1" />
-                                View
+                              <Button variant="outline" size="sm" asChild>
+                                <Link to={`/part-number/${partNumber.id}`}>
+                                  <EyeIcon className="h-4 w-4 mr-1" />
+                                  View
+                                </Link>
                               </Button>
                             </div>
                           </td>
@@ -163,6 +175,14 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
           )}
         </CardContent>
       </Card>
+      
+      {/* Part Number Create Modal */}
+      <PartNumberCreateModal
+        rfqId={rfqId}
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
 } 
