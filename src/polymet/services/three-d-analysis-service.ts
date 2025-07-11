@@ -32,7 +32,7 @@ export interface ThreeDAnalysisResponse {
 }
 
 export class ThreeDAnalysisService {
-  private static readonly API_URL = '/api/3d/analyze';
+  private static readonly API_URL = 'https://api-3d.autana.ai/api/analyze';
 
   static async analyzeModel(
     fileUrl: string, 
