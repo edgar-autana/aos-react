@@ -1,81 +1,75 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { type ThreeDAnalysisResult } from "../services/three-d-analysis-service";
+
+interface ThreeDAnalysisResult {
+  bounding_box: {
+    x: {
+      length: number;
+      max: number;
+      min: number;
+    };
+    y: {
+      length: number;
+      max: number;
+      min: number;
+    };
+    z: {
+      length: number;
+      max: number;
+      min: number;
+    };
+  };
+  center_of_mass: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  surface_area: number;
+  volume: number;
+}
 
 interface ThreeDAnalysisResultProps {
   analysis: ThreeDAnalysisResult;
 }
 
 export default function ThreeDAnalysisResult({ analysis }: ThreeDAnalysisResultProps) {
-  const formatNumber = (num: number) => {
-    return Number(num.toFixed(2)).toLocaleString();
-  };
-
-  const getComplexityLevel = () => {
-    const volume = analysis.volume;
-    const surfaceArea = analysis.surface_area;
-    
-    if (volume > 1000000 || surfaceArea > 100000) return 'High';
-    if (volume > 100000 || surfaceArea > 10000) return 'Medium';
-    return 'Low';
-  };
-
-  const getComplexityColor = (complexity: string) => {
-    switch (complexity) {
-      case 'Low': return 'bg-green-100 text-green-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'High': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const complexity = getComplexityLevel();
-
   return (
     <div className="space-y-6">
-      {/* Header Information */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">3D Model Analysis</CardTitle>
-              <p className="text-muted-foreground">Geometric Analysis Results</p>
-            </div>
-            <div className={`px-2.5 py-0.5 text-xs font-semibold rounded-md border ${getComplexityColor(complexity)}`}>
-              {complexity} Complexity
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold">3D Model Analysis</h2>
+        <p className="text-muted-foreground mt-1">
+          Geometric properties from 3D analysis
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Bounding Box Dimensions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Bounding Box */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Bounding Box Dimensions</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Bounding Box</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
-                <p className="text-2xl font-bold">{formatNumber(analysis.bounding_box.x.length)}</p>
-                <p className="text-sm text-muted-foreground">X Length (mm)</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatNumber(analysis.bounding_box.x.min)} to {formatNumber(analysis.bounding_box.x.max)}
-                </p>
+                <div className="text-xs text-muted-foreground">X Axis</div>
+                <div className="font-medium">{analysis.bounding_box.x.length.toFixed(1)} mm</div>
+                <div className="text-xs text-muted-foreground">
+                  {analysis.bounding_box.x.min.toFixed(1)} to {analysis.bounding_box.x.max.toFixed(1)}
+                </div>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{formatNumber(analysis.bounding_box.y.length)}</p>
-                <p className="text-sm text-muted-foreground">Y Length (mm)</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatNumber(analysis.bounding_box.y.min)} to {formatNumber(analysis.bounding_box.y.max)}
-                </p>
+                <div className="text-xs text-muted-foreground">Y Axis</div>
+                <div className="font-medium">{analysis.bounding_box.y.length.toFixed(1)} mm</div>
+                <div className="text-xs text-muted-foreground">
+                  {analysis.bounding_box.y.min.toFixed(1)} to {analysis.bounding_box.y.max.toFixed(1)}
+                </div>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{formatNumber(analysis.bounding_box.z.length)}</p>
-                <p className="text-sm text-muted-foreground">Z Length (mm)</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatNumber(analysis.bounding_box.z.min)} to {formatNumber(analysis.bounding_box.z.max)}
-                </p>
+                <div className="text-xs text-muted-foreground">Z Axis</div>
+                <div className="font-medium">{analysis.bounding_box.z.length.toFixed(1)} mm</div>
+                <div className="text-xs text-muted-foreground">
+                  {analysis.bounding_box.z.min.toFixed(1)} to {analysis.bounding_box.z.max.toFixed(1)}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -83,98 +77,94 @@ export default function ThreeDAnalysisResult({ analysis }: ThreeDAnalysisResultP
 
         {/* Center of Mass */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Center of Mass</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Center of Mass</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center">
+                <div className="text-xs text-muted-foreground">X</div>
+                <div className="font-medium">{analysis.center_of_mass.x.toFixed(1)} mm</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-muted-foreground">Y</div>
+                <div className="font-medium">{analysis.center_of_mass.y.toFixed(1)} mm</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-muted-foreground">Z</div>
+                <div className="font-medium">{analysis.center_of_mass.z.toFixed(1)} mm</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Volume */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">X Coordinate:</span>
-                <span className="text-sm font-mono">{formatNumber(analysis.center_of_mass.x)} mm</span>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {analysis.volume.toLocaleString()} mm³
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Y Coordinate:</span>
-                <span className="text-sm font-mono">{formatNumber(analysis.center_of_mass.y)} mm</span>
+              <div className="text-xs text-muted-foreground mt-1">
+                {(analysis.volume / 1000).toFixed(2)} cm³
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Z Coordinate:</span>
-                <span className="text-sm font-mono">{formatNumber(analysis.center_of_mass.z)} mm</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Surface Area */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Surface Area</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {analysis.surface_area.toLocaleString()} mm²
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {(analysis.surface_area / 100).toFixed(2)} cm²
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Surface to Volume Ratio */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Surface/Volume Ratio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {(analysis.surface_area / analysis.volume).toFixed(3)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                mm²/mm³
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Volume and Surface Area */}
+      {/* Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Geometric Properties</CardTitle>
+          <CardTitle className="text-sm">Analysis Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="text-center p-6 bg-secondary rounded-lg">
-              <p className="text-3xl font-bold text-blue-600">{formatNumber(analysis.volume)}</p>
-              <p className="text-sm text-muted-foreground">Volume (mm³)</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatNumber(analysis.volume / 1000)} cm³
-              </p>
-            </div>
-            <div className="text-center p-6 bg-secondary rounded-lg">
-              <p className="text-3xl font-bold text-green-600">{formatNumber(analysis.surface_area)}</p>
-              <p className="text-sm text-muted-foreground">Surface Area (mm²)</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatNumber(analysis.surface_area / 100)} cm²
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Analysis Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Analysis Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-lg font-semibold text-blue-800">Model Size</p>
-              <p className="text-sm text-blue-600">
-                {formatNumber(analysis.bounding_box.x.length)} × {formatNumber(analysis.bounding_box.y.length)} × {formatNumber(analysis.bounding_box.z.length)} mm
-              </p>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-lg font-semibold text-green-800">Volume</p>
-              <p className="text-sm text-green-600">{formatNumber(analysis.volume / 1000)} cm³</p>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-lg font-semibold text-purple-800">Surface Area</p>
-              <p className="text-sm text-purple-600">{formatNumber(analysis.surface_area / 100)} cm²</p>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-900">Key Observations:</h4>
-            <ul className="space-y-1 text-sm text-gray-600">
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                Model spans {formatNumber(analysis.bounding_box.x.length)}mm in X direction
-              </li>
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                Center of mass is offset by {formatNumber(Math.abs(analysis.center_of_mass.x))}mm from origin
-              </li>
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                Surface area to volume ratio: {(analysis.surface_area / analysis.volume).toFixed(3)}
-              </li>
-              <li className="flex items-center">
-                <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                Complexity level: {complexity} (based on volume and surface area)
-              </li>
-            </ul>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>
+              This 3D model has a volume of <span className="font-medium">{analysis.volume.toLocaleString()} mm³</span> 
+              and a surface area of <span className="font-medium">{analysis.surface_area.toLocaleString()} mm²</span>.
+            </p>
+            <p>
+              The bounding box dimensions are {analysis.bounding_box.x.length.toFixed(1)} × {analysis.bounding_box.y.length.toFixed(1)} × {analysis.bounding_box.z.length.toFixed(1)} mm,
+              with the center of mass located at ({analysis.center_of_mass.x.toFixed(1)}, {analysis.center_of_mass.y.toFixed(1)}, {analysis.center_of_mass.z.toFixed(1)}) mm.
+            </p>
           </div>
         </CardContent>
       </Card>

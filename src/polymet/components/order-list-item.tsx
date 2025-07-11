@@ -154,7 +154,6 @@ export default function OrderListItem({ order }: OrderListItemProps) {
                 <Progress
                   value={order.progress}
                   className="w-24 h-2 bg-gray-100 dark:bg-gray-800"
-                  indicatorClassName={getProgressColor()}
                 />
               </div>
 
