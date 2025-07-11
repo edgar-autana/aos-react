@@ -14,6 +14,7 @@ import CreateRfqPage from "@/polymet/pages/create-rfq-page";
 import RfqDetailsPage from "@/polymet/pages/rfq-details-page";
 import PartAnalysisPage from "@/polymet/pages/part-analysis-page";
 import PartDetailsPage from "@/polymet/pages/part-details-page";
+import PartNumberDetailsPage from "@/polymet/pages/part-number-details-page";
 import ContactsPage from "@/polymet/components/contacts-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
 import { useState } from "react";
@@ -191,6 +192,18 @@ export default function CncOrderTrackerPrototype() {
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
                   <RfqDetailsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Part Number Details Route */}
+          <Route
+            path="/part-number/:id"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <PartNumberDetailsPage />
                 </AppLayout>
               </ProtectedRoute>
             }

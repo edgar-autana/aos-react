@@ -120,17 +120,14 @@ export default function RfqDetailsPage() {
                   <span>Created: {formatDate(rfq.created_at)}</span>
                 </div>
                 {rfq.due_date && (
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
                     <span>Due: {formatRfqDate(rfq.due_date)}</span>
-                  </div>
+                </div>
                 )}
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <Link to={`/rfqs/${rfq.id}/edit`}>Edit RFQ</Link>
-              </Button>
               <Button variant="default">Generate Quote</Button>
             </div>
           </div>

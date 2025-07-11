@@ -235,14 +235,14 @@ export default function SupplierProfilePage() {
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <div className="relative group">
           <Avatar className="h-20 w-20 border cursor-pointer transition-all duration-200 group-hover:opacity-80">
-            {form.image ? (
+          {form.image ? (
               <AvatarImage src={form.image} alt={form.name || 'Supplier'} />
-            ) : (
-              <AvatarFallback className="text-xl">
+          ) : (
+            <AvatarFallback className="text-xl">
                 <Building2Icon className="h-8 w-8 text-muted-foreground" />
-              </AvatarFallback>
-            )}
-          </Avatar>
+            </AvatarFallback>
+          )}
+        </Avatar>
           <input
             ref={fileInputRef}
             type="file"
