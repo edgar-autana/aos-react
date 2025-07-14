@@ -152,6 +152,15 @@ export const s3Service = {
     });
   },
 
+  // Upload contact profile image
+  async uploadContactImage(file: File, contactId: string): Promise<UploadResponse> {
+    return this.uploadFile({
+      file,
+      folder: `contacts/${contactId}/profile`,
+      contentType: file.type
+    });
+  },
+
   // Delete file from S3
   async deleteFile(key: string): Promise<boolean> {
     try {

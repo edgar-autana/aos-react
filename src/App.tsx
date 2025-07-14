@@ -15,11 +15,9 @@ import RfqDetailsPage from "@/polymet/pages/rfq-details-page";
 import PartAnalysisPage from "@/polymet/pages/part-analysis-page";
 import PartDetailsPage from "@/polymet/pages/part-details-page";
 import PartNumberDetailsPage from "@/polymet/pages/part-number-details-page";
-import ContactsPage from "@/polymet/components/contacts-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
-import { useState } from "react";
+import NewContactsPage from "@/pages/contacts/ContactsPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import type { Contact } from "@/polymet/components/contacts-page";
 
 // Auth Layout Component
 function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -33,8 +31,6 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function CncOrderTrackerPrototype() {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  
   return (
     <>
       <Router>
@@ -289,7 +285,7 @@ export default function CncOrderTrackerPrototype() {
             }
           />
 
-          <Route
+          {/* <Route
             path="/contacts"
             element={
               <ProtectedRoute permission="org:all:access">
@@ -298,14 +294,25 @@ export default function CncOrderTrackerPrototype() {
                 </AppLayout>
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           <Route
             path="/contacts/:contactId"
             element={
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
-                  <ContactProfilePage contacts={contacts} setContacts={setContacts} />
+                  <ContactProfilePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <NewContactsPage />
                 </AppLayout>
               </ProtectedRoute>
             }

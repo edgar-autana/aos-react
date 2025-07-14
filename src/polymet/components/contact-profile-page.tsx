@@ -1,249 +1,377 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
-  MailIcon,
   PhoneIcon,
+  MailIcon,
   LinkedinIcon,
-  BriefcaseIcon,
-  TagIcon,
   UserIcon,
+  CalendarIcon,
+  Building2Icon,
+  TruckIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { Contact } from "./contacts-page";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { contactApi } from "@/services/contact/contactApi";
+import { useCompanies } from "@/hooks/company/useCompanies";
+import { useSuppliers } from "@/hooks/supplier/useSuppliers";
+import { Contact, ContactPayload } from "@/types/contact/contact";
+import { PageLoading } from "@/components/ui/loading";
+import { useToast } from "@/components/ui/use-toast";
+import { s3Service, validateImageFile } from "@/lib/s3";
+import ContactDetailsTab from "./contact-details-tab";
 
-const emptyContact: Contact = {
-  id: '',
-  name: '',
-  lastName: '',
-  linkedin: '',
-  source: '',
-  tag: '',
-  email: '',
-  phone: '',
-  company: '',
-  provider: '',
-  position: '',
-  image: '',
-  mainContact: false,
-  supplier: '',
-};
-
-interface ContactProfilePageProps {
-  contacts: Contact[];
-  setContacts: React.Dispatch<React.SetStateAction<Contact[]>>;
-}
-
-export default function ContactProfilePage({ contacts, setContacts }: ContactProfilePageProps) {
+export default function ContactProfilePage() {
   const { contactId } = useParams();
   const navigate = useNavigate();
-  const isNew = contactId === 'new';
-  const contact = isNew ? emptyContact : contacts.find((c: Contact) => c.id === contactId) || emptyContact;
-  const [form, setForm] = useState<Contact>(contact);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const { toast } = useToast();
+  const { companies } = useCompanies();
+  const { suppliers } = useSuppliers();
+  
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
-  };
+  // Fetch contact data by ID
+  useEffect(() => {
+    const fetchContact = async () => {
+      if (!contactId) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await contactApi.getById(contactId);
+        
+        if (response.error) {
+          setError(response.error);
+        } else if (response.data) {
+          setContact(response.data);
+        } else {
+          setError("Contact not found");
+        }
+      } catch (err) {
+        setError("Failed to load contact data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAvatarFile(e.target.files[0]);
-      setForm(f => ({ ...f, image: URL.createObjectURL(e.target.files![0]) }));
+    fetchContact();
+  }, [contactId]);
+
+  // Handle avatar upload
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !contactId) return;
+    
+    const file = e.target.files[0];
+    
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid image file');
+      return;
+    }
+    
+    setImageUploading(true);
+    setError(null);
+    
+    try {
+      // Upload image to S3
+      const uploadResult = await s3Service.uploadContactImage(file, contactId);
+      
+      if (!uploadResult.success) {
+        setError(uploadResult.error || 'Failed to upload image');
+        return;
+      }
+      
+      // Update contact image URL in database
+      const updateData = { image: uploadResult.url };
+      const response = await contactApi.update(contactId, updateData);
+      
+      if (response.error) {
+        setError(response.error);
+        // If database update fails, clean up uploaded file
+        if (uploadResult.key) {
+          await s3Service.deleteFile(uploadResult.key);
+        }
+      } else if (response.data) {
+        // Update local state with new image URL
+        setContact(response.data);
+        toast({
+          title: "Success",
+          description: "Profile image updated successfully",
+        });
+      }
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to upload image";
+      setError(errorMessage);
+      console.error('Avatar upload error:', err);
+    } finally {
+      setImageUploading(false);
+      // Reset file input
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
 
-  const handleUpdate = () => {
-    if (isNew) {
-      setContacts(prev => [...prev, { ...form, id: Date.now().toString() }]);
-    } else {
-      setContacts(prev => prev.map((c: Contact) => c.id === contactId ? form : c));
+  // Handle form submission
+  const handleFormSubmit = async (formData: ContactPayload) => {
+    if (!contact) return;
+    
+    setSaveLoading(true);
+    
+    try {
+      const response = await contactApi.update(contact.id, formData);
+      
+      if (response.error) {
+        toast({
+          title: "Error",
+          description: response.error,
+          variant: "destructive",
+        });
+      } else if (response.data) {
+        setContact(response.data);
+        toast({
+          title: "Success",
+          description: "Contact updated successfully",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to update contact",
+        variant: "destructive",
+      });
+    } finally {
+      setSaveLoading(false);
     }
-    navigate('/contacts');
-  };
-
-  const handleDelete = () => {
-    setContacts(prev => prev.filter((c: Contact) => c.id !== contactId));
-    navigate('/contacts');
   };
 
   // Get initials for avatar fallback
-  const getInitials = (name: string, lastName: string) => {
-    return (name.charAt(0) + (lastName.charAt(0) || "")).toUpperCase();
+  const getInitials = (contact: Contact) => {
+    const firstName = contact.name || "";
+    const lastName = contact.last_name || "";
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "C";
   };
 
+  // Get company name from ID
+  const getCompanyName = (companyId: string | null) => {
+    if (!companyId) return null;
+    const company = companies.find(c => c.id === companyId);
+    return company?.name || null;
+  };
+
+  // Get supplier name from ID
+  const getSupplierName = (supplierId: string | null) => {
+    if (!supplierId) return null;
+    const supplier = suppliers.find(s => s.id === supplierId);
+    return supplier?.name || null;
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Loading state
+  if (loading) {
+    return <PageLoading text="Loading contact data..." />;
+  }
+
+  // Error state
+  if (error || !contact) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <h1 className="text-2xl font-bold mb-4">Contact Not Found</h1>
+        <p className="text-muted-foreground mb-6">
+          {error || "The contact you're looking for doesn't exist or has been removed."}
+        </p>
+        <Button variant="outline" onClick={() => navigate('/contacts')}>
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to Contacts
+        </Button>
+      </div>
+    );
+  }
+
+  const companyName = getCompanyName(contact.company);
+  const supplierName = getSupplierName(contact.supplier);
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-8">
+    <div className="space-y-6">
       {/* Back button */}
       <Button variant="ghost" className="pl-0 mb-2" onClick={() => navigate('/contacts')}>
         <ArrowLeftIcon className="h-4 w-4 mr-2" />
         Back to Contacts
       </Button>
 
-      {/* Profile header */}
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {/* Contact header */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
-        <div className="relative">
-          <Avatar className="h-20 w-20 border">
-            {form.image ? (
-              <AvatarImage src={form.image} alt={form.name} />
+        <div className="relative group">
+          <Avatar className="h-20 w-20 border cursor-pointer transition-all duration-200 group-hover:opacity-80">
+            {contact.image ? (
+              <AvatarImage src={contact.image} alt={`${contact.name} ${contact.last_name}`} />
             ) : (
               <AvatarFallback className="text-xl">
-                {getInitials(form.name, form.lastName)}
+                {getInitials(contact)}
               </AvatarFallback>
             )}
           </Avatar>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".png,.jpg,.jpeg"
+            accept=".png,.jpg,.jpeg,.gif,.webp"
             className="hidden"
             onChange={handleAvatarChange}
+            disabled={imageUploading}
           />
-          <Button size="sm" variant="outline" className="absolute bottom-0 right-0" onClick={() => fileInputRef.current?.click()}>
-            Upload
-          </Button>
+          {imageUploading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+          )}
         </div>
+
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{form.name} {form.lastName}</h1>
-            {form.mainContact && (
-              <Badge className="bg-blue-100 text-blue-800">Main Contact</Badge>
+            <h1 className="text-2xl font-bold">
+              {contact.name} {contact.last_name}
+            </h1>
+            <Badge
+              variant={contact.enabled ? "default" : "secondary"}
+              className={
+                contact.enabled
+                  ? "bg-green-100 text-green-800 hover:bg-green-100"
+                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+              }
+            >
+              {contact.enabled ? "Active" : "Inactive"}
+            </Badge>
+            {contact.main_contact && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                Main Contact
+              </Badge>
             )}
-            {form.tag && (
-              <Badge variant="secondary" className="bg-gray-100 text-gray-800 flex items-center gap-1"><TagIcon className="h-3 w-3" />{form.tag}</Badge>
+            {contact.invited && (
+              <Badge variant="outline" className="bg-green-100 text-green-800">
+                Invited
+              </Badge>
             )}
           </div>
-          <p className="text-lg text-muted-foreground">{form.company}</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm pt-2">
-            {form.email && (
+            {contact.email && (
               <div className="flex items-center gap-1">
                 <MailIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{form.email}</span>
+                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
+                  {contact.email}
+                </a>
               </div>
             )}
-            {form.phone && (
+            {contact.phone && (
               <div className="flex items-center gap-1">
                 <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{form.phone}</span>
+                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                  {contact.phone}
+                </a>
               </div>
             )}
-            {form.linkedin && (
+            {contact.linkedin && (
               <div className="flex items-center gap-1">
                 <LinkedinIcon className="h-4 w-4 text-muted-foreground" />
-                <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="underline">LinkedIn</a>
+                <a 
+                  href={contact.linkedin} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  LinkedIn
+                </a>
               </div>
             )}
-            {form.position && (
+            {companyName && (
               <div className="flex items-center gap-1">
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{form.position}</span>
+                <Building2Icon className="h-4 w-4 text-muted-foreground" />
+                <span>{companyName}</span>
               </div>
             )}
-            {form.provider && (
+            {supplierName && (
               <div className="flex items-center gap-1">
-                <BriefcaseIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{form.provider}</span>
+                <TruckIcon className="h-4 w-4 text-muted-foreground" />
+                <span>{supplierName}</span>
+              </div>
+            )}
+            {contact.created_at_atos && (
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span>Created {formatDate(contact.created_at_atos)}</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Details card */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Contact Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={e => { e.preventDefault(); handleUpdate(); }}>
-            <div>
-              <label className="font-medium">Name *</label>
-              <Input name="name" value={form.name} onChange={handleChange} required />
-            </div>
-            <div>
-              <label className="font-medium">Last name *</label>
-              <Input name="lastName" value={form.lastName} onChange={handleChange} required />
-            </div>
-            <div>
-              <label className="font-medium">Linkedin</label>
-              <Input name="linkedin" value={form.linkedin} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Source</label>
-              <Input name="source" value={form.source} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Tag</label>
-              <Input name="tag" value={form.tag} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Email</label>
-              <Input name="email" value={form.email} onChange={handleChange} type="email" />
-            </div>
-            <div>
-              <label className="font-medium">Phone</label>
-              <Input name="phone" value={form.phone} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Company</label>
-              <Input name="company" value={form.company} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Provider</label>
-              <Input name="provider" value={form.provider} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="font-medium">Position</label>
-              <Input name="position" value={form.position} onChange={handleChange} />
-            </div>
-            <div className="flex items-center gap-2 col-span-1 md:col-span-2">
-              <input type="checkbox" name="mainContact" checked={form.mainContact} onChange={handleChange} />
-              <label>Main Contact Customer</label>
-            </div>
-            <div className="flex gap-2 mt-6 col-span-1 md:col-span-2">
-              <Button type="submit" variant="default">{isNew ? 'Create' : 'Update'}</Button>
-              {!isNew && (
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="destructive" onClick={() => setDeleteDialogOpen(true)}>Delete</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Contact</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this contact? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <Button type="button" variant="outline" onClick={() => navigate('/contacts')}>Cancel</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      {/* Contact content */}
+      <Tabs defaultValue="details" className="mt-6">
+        <TabsList className="grid w-full grid-cols-2 md:w-auto">
+          <TabsTrigger value="details">Contact Details</TabsTrigger>
+          <TabsTrigger value="operations">Operations</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-6 mt-6">
+          <ContactDetailsTab
+            contact={contact}
+            onFormSubmit={handleFormSubmit}
+            isLoading={saveLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="operations" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Operations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <div className="text-muted-foreground">
+                  <UserIcon className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-lg font-medium">No operations available</p>
+                  <p className="text-sm">Operations functionality will be added in the future.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 
