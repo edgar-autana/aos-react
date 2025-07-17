@@ -32,6 +32,8 @@ import { s3Service, validateImageFile, validatePresentationFile } from "@/lib/s3
 import CustomerDetailsTab from "./customer-details-tab";
 import CustomerStatsTab from "./customer-stats-tab";
 import CustomerRfqsTab from "./customer-rfqs-tab";
+import CustomerPartNumbersTab from "./customer-part-numbers-tab";
+import CustomerGlobalQuotationsTab from "./customer-global-quotations-tab";
 
 export default function CustomerProfilePage() {
   const { customerId } = useParams();
@@ -412,10 +414,12 @@ export default function CustomerProfilePage() {
 
       {/* Customer content */}
       <Tabs defaultValue="details" className="mt-6">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto">
-          <TabsTrigger value="details">Company Details</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
-          <TabsTrigger value="rfqs">RFQs</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
+          <TabsTrigger value="rfqs" className="flex-1">RFQs</TabsTrigger>
+          <TabsTrigger value="part-numbers" className="flex-1">PNs</TabsTrigger>
+          <TabsTrigger value="global-quotations" className="flex-1">Global Quotations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6 mt-6">
@@ -434,6 +438,14 @@ export default function CustomerProfilePage() {
 
         <TabsContent value="rfqs" className="space-y-6 mt-6">
           <CustomerRfqsTab customerId={customerId!} />
+        </TabsContent>
+
+        <TabsContent value="part-numbers" className="space-y-6 mt-6">
+          <CustomerPartNumbersTab customerId={customerId!} />
+        </TabsContent>
+
+        <TabsContent value="global-quotations" className="space-y-6 mt-6">
+          <CustomerGlobalQuotationsTab customerId={customerId!} />
         </TabsContent>
       </Tabs>
 

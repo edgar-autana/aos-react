@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +30,13 @@ import PartNumberQuotesTab from "@/polymet/components/part-number-quotes-tab";
 export default function PartNumberDetailsPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [rfqData, setRfqData] = useState<RFQWithCompany | null>(null);
   const [rfqLoading, setRfqLoading] = useState(false);
   const [rfqError, setRfqError] = useState<string | null>(null);
+  
+  // Get quotation ID from URL params for auto-opening edit modal
+  const quotationId = searchParams.get('quotation');
 
   // Fetch part number by ID
   const { partNumber, loading: partLoading, error: partError } = usePartNumber(id);
@@ -40,8 +44,12 @@ export default function PartNumberDetailsPage() {
   // Fetch RFQ data when part number is loaded
   useEffect(() => {
     const fetchRfqData = async () => {
-      if (!partNumber?.rfq) return;
+      if (!partNumber?.rfq) {
+        console.log('No RFQ found for part number:', partNumber);
+        return;
+      }
 
+      console.log('Fetching RFQ data for RFQ ID:', partNumber.rfq);
       setRfqLoading(true);
       setRfqError(null);
 
@@ -51,11 +59,14 @@ export default function PartNumberDetailsPage() {
         const response = await rfqApi.getByIdWithCompany(partNumber.rfq);
 
         if (response.error) {
+          console.error('Error fetching RFQ:', response.error);
           setRfqError(response.error);
         } else {
+          console.log('RFQ data loaded successfully:', response.data);
           setRfqData(response.data);
         }
       } catch (error) {
+        console.error('Exception fetching RFQ:', error);
         setRfqError('Failed to fetch RFQ information');
       } finally {
         setRfqLoading(false);
@@ -149,16 +160,31 @@ export default function PartNumberDetailsPage() {
   return (
     <div className="container mx-auto space-y-6">
       {/* Back button */}
-      {rfqData && (
+      {rfqData ? (
         <Button 
           variant="ghost" 
           className="pl-0 mb-2" 
-          onClick={() => navigate(`/rfq/${rfqData.id}`)}
+          onClick={() => {
+            console.log('Navigating to RFQ:', rfqData.id);
+            navigate(`/rfqs/${rfqData.id}`);
+          }}
         >
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back to RFQ
         </Button>
-      )}
+      ) : partNumber?.rfq ? (
+        <Button 
+          variant="ghost" 
+          className="pl-0 mb-2" 
+          onClick={() => {
+            console.log('Navigating to RFQ with fallback ID:', partNumber.rfq);
+            navigate(`/rfqs/${partNumber.rfq}`);
+          }}
+        >
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to RFQ
+        </Button>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold">Part Number Details</h1>
@@ -255,6 +281,7 @@ export default function PartNumberDetailsPage() {
               id: rfqData.id,
               name: rfqData.name || 'Unknown RFQ'
             } : null}
+            initialQuotationId={quotationId}
           />
         </TabsContent>
 

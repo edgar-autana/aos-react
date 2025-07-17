@@ -41,14 +41,26 @@ interface PartNumberQuotesTabProps {
     id: string;
     name: string;
   } | null;
+  initialQuotationId?: string | null;
 }
 
-export default function PartNumberQuotesTab({ partNumberId, partNumber, companyInfo, rfqInfo }: PartNumberQuotesTabProps) {
+export default function PartNumberQuotesTab({ partNumberId, partNumber, companyInfo, rfqInfo, initialQuotationId }: PartNumberQuotesTabProps) {
   const { quotations, loading, error, refetch } = useQuotationsWithDetails(partNumberId);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<QuotationWithDetails | null>(null);
   const [creatingVersionFrom, setCreatingVersionFrom] = useState<QuotationWithDetails | null>(null);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
+
+  // Auto-open edit modal for specific quotation if initialQuotationId is provided
+  React.useEffect(() => {
+    if (initialQuotationId && quotations.length > 0) {
+      const targetQuotation = quotations.find(q => q.id === initialQuotationId);
+      if (targetQuotation) {
+        setEditingQuotation(targetQuotation);
+        setIsCreatingVersion(false);
+      }
+    }
+  }, [initialQuotationId, quotations]);
 
   // Get status color
   const getStatusColor = (status: string): string => {
