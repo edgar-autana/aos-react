@@ -25,6 +25,7 @@ import { PartNumber } from "@/types/part-number/partNumber";
 import { RFQWithCompany } from "@/types/rfq/rfq";
 import { getRfqDisplayName, getRfqStatusColor, getRfqStatusText, formatRfqDate } from "@/utils/rfq/rfqUtils";
 import PartNumberAnalysisForm from "@/polymet/components/part-number-analysis-form";
+import PartNumberQuotesTab from "@/polymet/components/part-number-quotes-tab";
 
 export default function PartNumberDetailsPage() {
   const { id = "" } = useParams();
@@ -225,11 +226,6 @@ export default function PartNumberDetailsPage() {
                 )}
               </div>
             </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline">Edit Part</Button>
-              <Button variant="default">Generate Quote</Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -242,21 +238,24 @@ export default function PartNumberDetailsPage() {
         </TabsList>
 
         <TabsContent value="quotes" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quotes</CardTitle>
-              <CardDescription>
-                Quotes and pricing information for this part number
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Package2Icon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-lg font-medium">No quotes available</p>
-                <p className="text-sm">Quotes for this part number will appear here.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <PartNumberQuotesTab 
+            partNumberId={id} 
+            partNumber={{
+              id: partNumber.id,
+              part_name: partNumber.part_name || 'Unknown Part',
+              drawing_number: partNumber.drawing_number || 'Unknown',
+              estimated_anual_units: partNumber.estimated_anual_units || undefined
+            }}
+            companyInfo={rfqData?.company_info ? {
+              id: rfqData.company_info.id,
+              name: rfqData.company_info.name,
+              image: rfqData.company_info.image || undefined
+            } : null}
+            rfqInfo={rfqData ? {
+              id: rfqData.id,
+              name: rfqData.name || 'Unknown RFQ'
+            } : null}
+          />
         </TabsContent>
 
         <TabsContent value="analysis" className="space-y-6 mt-6">
