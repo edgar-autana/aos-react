@@ -281,7 +281,7 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
                               <div className="flex items-center gap-1">
                                 <DollarSignIcon className="h-3 w-3" />
                                 <span>
-                                  {formatCurrency(group.rootQuotation.unit_price)} / unit
+                                  {formatCurrency(group.rootQuotation.total_price)} / unit
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
@@ -360,7 +360,7 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
                                   <div className="flex items-center gap-1">
                                     <DollarSignIcon className="h-3 w-3" />
                                     <span>
-                                      {formatCurrency(version.unit_price)} / unit
+                                      {formatCurrency(version.total_price)} / unit
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1">

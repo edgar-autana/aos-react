@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Loader2,
   PlusIcon,
-  Trash2Icon
+  Trash2Icon,
+  EyeIcon,
+  FileImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { partNumberApi } from '@/services/part-number/partNumberApi';
@@ -25,6 +27,7 @@ import { PartNumber } from '@/types/part-number/partNumber';
 import { QuotationWithDetails } from '@/types/quotation/quotation';
 import { GlobalQuotationPayload } from '@/types/global-quotation/globalQuotation';
 import { RFQ } from '@/types/rfq/rfq';
+import { Link } from 'react-router-dom';
 
 interface CustomerPartNumbersTabProps {
   customerId: string;
@@ -404,9 +407,11 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
                       <th className="text-left p-4 font-medium">Part Number</th>
                       <th className="text-left p-4 font-medium">Process</th>
                       <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-left p-4 font-medium">Documents</th>
                       <th className="text-left p-4 font-medium">EAU</th>
                       <th className="text-left p-4 font-medium">Piece Price</th>
                       <th className="text-left p-4 font-medium">Selection</th>
+                      <th className="text-left p-4 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -437,6 +442,35 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
                           </Badge>
                         </td>
                         <td className="p-4">
+                          <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+                            {partNumber.part_drawing_2d && (
+                              <a
+                                href={partNumber.part_drawing_2d}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                              >
+                                <FileTextIcon className="h-3 w-3" />
+                                2D Drawing
+                              </a>
+                            )}
+                            {partNumber.part_drawing_3d && (
+                              <a
+                                href={partNumber.part_drawing_3d}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                              >
+                                <FileImageIcon className="h-3 w-3" />
+                                3D Model
+                              </a>
+                            )}
+                            {!partNumber.part_drawing_2d && !partNumber.part_drawing_3d && (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
                           <div className="text-sm">
                             {formatNumber(partNumber.estimated_anual_units)}
                           </div>
@@ -455,6 +489,13 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
                               {getSelectedQuotesForPartNumber(partNumber.id).length} selected
                             </span>
                           </div>
+                        </td>
+                        <td className="p-4">
+                          <Link to={`/part-number/${partNumber.id}`} onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                              <EyeIcon className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         </td>
                       </tr>
                     ))}

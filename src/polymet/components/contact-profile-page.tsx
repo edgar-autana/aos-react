@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   Building2Icon,
   TruckIcon,
+  SettingsIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -363,7 +364,7 @@ export default function ContactProfilePage() {
             <CardContent>
               <div className="text-center py-12">
                 <div className="text-muted-foreground">
-                  <UserIcon className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <SettingsIcon className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-lg font-medium">No operations available</p>
                   <p className="text-sm">Operations functionality will be added in the future.</p>
                 </div>
