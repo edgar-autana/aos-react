@@ -70,7 +70,6 @@ export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
                       <th className="text-left p-4 font-medium">Name</th>
                       <th className="text-left p-4 font-medium">Status</th>
                       <th className="text-left p-4 font-medium">Priority</th>
-                      <th className="text-left p-4 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -78,7 +77,9 @@ export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
                       customerRfqs.map((rfq) => (
                         <tr key={rfq.id} className="hover:bg-muted/50">
                           <td className="p-4">
-                            <div className="font-medium">{getRfqDisplayName(rfq)}</div>
+                            <Link to={`/rfqs/${rfq.id}`} className="font-medium hover:text-primary transition-colors">
+                              {getRfqDisplayName(rfq)}
+                            </Link>
                           </td>
                           <td className="p-4 min-w-[250px]">
                             <Badge 
@@ -99,18 +100,11 @@ export default function CustomerRfqsTab({ customerId }: CustomerRfqsTabProps) {
                               {getRfqPriorityText(rfq.priority)}
                             </Badge>
                           </td>
-                          <td className="p-4">
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to={`/rfqs/${rfq.id}`}>
-                                View Details
-                              </Link>
-                            </Button>
-                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="text-center py-8">
+                        <td colSpan={3} className="text-center py-8">
                           <div className="text-muted-foreground">
                             <div className="mb-4">
                               <svg className="w-12 h-12 mx-auto text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

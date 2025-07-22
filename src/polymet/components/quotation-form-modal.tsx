@@ -15,7 +15,12 @@ import { Loader2, AlertCircle, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSuppliers } from '@/hooks/supplier/useSuppliers';
 import { useQuotationMutations } from '@/hooks/quotation/useQuotations';
+import { useMaterialAlloys } from '@/hooks/material/useMaterialAlloys';
+import { useCNCMachines } from '@/hooks/cnc/useCNCMachines';
 import { QuotationWithDetails } from '@/types/quotation/quotation';
+import QuotationRawMaterialSection from './quotation-raw-material-section';
+import QuotationCNCMachiningSection from './quotation-cnc-machining-section';
+import { Badge } from '@/components/ui/badge';
 
 // Validation schema
 const quotationSchema = z.object({
@@ -23,6 +28,21 @@ const quotationSchema = z.object({
   unit_price: z.number().min(0, "Unit price must be positive").nullable(),
   total_price: z.number().min(0, "Total price must be positive").nullable(),
   quantity: z.number().min(1, "Quantity must be at least 1").nullable(),
+  moq1: z.number().min(0, "MOQ must be positive").nullable(),
+  moq_margin_1: z.number().min(0, "MOQ margin must be positive").nullable(),
+  material_alloy: z.string().nullable(),
+  cost_of_plate: z.number().min(0, "Cost of plate must be positive").nullable(),
+  cavities: z.number().min(0, "Cavities must be positive").nullable(),
+  rm_cnc_scrap: z.number().min(0, "RM CNC scrap must be positive").nullable(),
+  rm_cnc_margin: z.number().min(0, "RM CNC margin must be positive").nullable(),
+  rm_cnc_piece_price: z.number().min(0, "RM CNC piece price must be positive").nullable(),
+  piece_weight_rm_cnc_percentage: z.number().min(0, "Weight percentage must be positive").nullable(),
+  cnc_machine: z.string().nullable(),
+  machine_cost_per_hour: z.number().min(0, "Machine cost per hour must be positive").nullable(),
+  cycle_time_sec: z.number().min(0, "Cycle time must be positive").nullable(),
+  piece_price_cnc_no_scrap: z.number().min(0, "CNC piece price no scrap must be positive").nullable(),
+  piece_price_cnc_scrap: z.number().min(0, "CNC piece price scrap must be positive").nullable(),
+  piece_weight_cnc_percentage: z.number().min(0, "CNC weight percentage must be positive").nullable(),
   lead_time_days: z.number().min(0, "Lead time must be positive").nullable(),
   validity_days: z.number().min(1, "Validity days must be at least 1").nullable(),
   notes: z.string().optional(),
@@ -44,6 +64,7 @@ interface QuotationFormModalProps {
     part_name: string;
     drawing_number: string;
     estimated_anual_units?: number;
+    cavities?: number | null;
   };
   editingQuotation?: QuotationWithDetails | null;
   isCreatingVersion?: boolean;
@@ -71,6 +92,8 @@ export default function QuotationFormModal({
 }: QuotationFormModalProps) {
   const { toast } = useToast();
   const { suppliers, loading: suppliersLoading } = useSuppliers();
+  const { materialAlloys, loading: materialAlloysLoading } = useMaterialAlloys();
+  const { cncMachines, loading: cncMachinesLoading } = useCNCMachines();
   const { createQuotation, createVersion, updateQuotation, loading: mutationLoading } = useQuotationMutations();
   const [error, setError] = useState<string | null>(null);
   const [internalIsCreatingVersion, setInternalIsCreatingVersion] = useState(false);
@@ -89,6 +112,21 @@ export default function QuotationFormModal({
       unit_price: editingQuotation?.unit_price || null,
       total_price: editingQuotation?.total_price || null,
       quantity: editingQuotation?.quantity || partNumber.estimated_anual_units || null,
+      moq1: editingQuotation?.moq1 || null,
+      moq_margin_1: editingQuotation?.moq_margin_1 || null,
+      material_alloy: editingQuotation?.material_alloy || null,
+      cost_of_plate: editingQuotation?.cost_of_plate || null,
+      cavities: editingQuotation?.cavities || partNumber.cavities || null,
+      rm_cnc_scrap: editingQuotation?.rm_cnc_scrap || null,
+      rm_cnc_margin: editingQuotation?.rm_cnc_margin || null,
+      rm_cnc_piece_price: editingQuotation?.rm_cnc_piece_price || null,
+      piece_weight_rm_cnc_percentage: editingQuotation?.piece_weight_rm_cnc_percentage || null,
+      cnc_machine: editingQuotation?.cnc_machine || null,
+      machine_cost_per_hour: editingQuotation?.machine_cost_per_hour || null,
+      cycle_time_sec: editingQuotation?.cycle_time_sec || null,
+      piece_price_cnc_no_scrap: editingQuotation?.piece_price_cnc_no_scrap || null,
+      piece_price_cnc_scrap: editingQuotation?.piece_price_cnc_scrap || null,
+      piece_weight_cnc_percentage: editingQuotation?.piece_weight_cnc_percentage || null,
       lead_time_days: editingQuotation?.lead_time_days || null,
       validity_days: editingQuotation?.validity_days || 30,
       notes: editingQuotation?.notes || '',
@@ -98,32 +136,53 @@ export default function QuotationFormModal({
   });
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = form;
-  const watchQuantity = watch('quantity');
-  const watchUnitPrice = watch('unit_price');
 
-  // Auto-calculate total price when quantity or unit price changes
+  // Watch values for total calculation
+  const costOfPlate = watch('cost_of_plate');
+  const rmCncMargin = watch('rm_cnc_margin');
+  const rmCncScrap = watch('rm_cnc_scrap');
+  const machineCostPerHour = watch('machine_cost_per_hour');
+  const cycleTimeSec = watch('cycle_time_sec');
+
+  // Calculate total and update total_price field
   useEffect(() => {
-    const quantity = watchQuantity || 0;
-    const unitPrice = watchUnitPrice || 0;
-    const totalPrice = quantity * unitPrice;
-    
-    if (totalPrice > 0) {
-      setValue('total_price', totalPrice);
+    try {
+      // Calculate RM Piece Price
+      const rmPiecePrice = costOfPlate && rmCncMargin ? costOfPlate * (1 + rmCncMargin) : null;
+      
+      // Calculate CNC Piece Price (No Scrap)
+      const cncNoScrap = cycleTimeSec && machineCostPerHour ? (cycleTimeSec / 3600) * machineCostPerHour : null;
+      
+      // Calculate CNC Scrap Cost
+      const cncScrapCost = costOfPlate && rmCncScrap ? costOfPlate * rmCncScrap : null;
+      
+      // Calculate CNC Piece Price (With Scrap)
+      const cncWithScrap = cncNoScrap && cncScrapCost ? cncNoScrap + cncScrapCost : null;
+      
+      // Calculate Total
+      const total = (rmPiecePrice || 0) + (cncWithScrap || 0);
+      
+      // Update total_price field
+      setValue('total_price', total > 0 ? total : null);
+      
+      // Clear any calculation errors
+      setError(null);
+    } catch (err) {
+      setError('Error calculating total price. Please check your input values.');
+      console.error('Calculation error:', err);
     }
-  }, [watchQuantity, watchUnitPrice, setValue]);
+  }, [costOfPlate, rmCncMargin, rmCncScrap, machineCostPerHour, cycleTimeSec, setValue]);
 
-  // Format number with commas
+  // Format number for display (kept for any remaining display needs)
   const formatNumber = (value: number | null): string => {
     if (value === null || value === undefined) return '';
     return value.toLocaleString('en-US');
   };
 
-  // Parse formatted number back to number
-  const parseFormattedNumber = (value: string): number | null => {
-    if (!value) return null;
-    const cleaned = value.replace(/,/g, '');
-    const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? null : parsed;
+  // Format percentage for display (kept for any remaining display needs)
+  const formatPercentage = (value: number | null): string => {
+    if (value === null || value === undefined) return '';
+    return `${(value * 100).toFixed(1)}%`;
   };
 
   // Reset form when modal opens/closes
@@ -136,6 +195,21 @@ export default function QuotationFormModal({
         unit_price: editingQuotation?.unit_price || null,
         total_price: editingQuotation?.total_price || null,
         quantity: editingQuotation?.quantity || partNumber.estimated_anual_units || null,
+        moq1: editingQuotation?.moq1 || null,
+        moq_margin_1: editingQuotation?.moq_margin_1 || null,
+        material_alloy: editingQuotation?.material_alloy || null,
+        cost_of_plate: editingQuotation?.cost_of_plate || null,
+        cavities: editingQuotation?.cavities || null,
+        rm_cnc_scrap: editingQuotation?.rm_cnc_scrap || null,
+        rm_cnc_margin: editingQuotation?.rm_cnc_margin || null,
+        rm_cnc_piece_price: editingQuotation?.rm_cnc_piece_price || null,
+        piece_weight_rm_cnc_percentage: editingQuotation?.piece_weight_rm_cnc_percentage || null,
+        cnc_machine: editingQuotation?.cnc_machine || null,
+        machine_cost_per_hour: editingQuotation?.machine_cost_per_hour || null,
+        cycle_time_sec: editingQuotation?.cycle_time_sec || null,
+        piece_price_cnc_no_scrap: editingQuotation?.piece_price_cnc_no_scrap || null,
+        piece_price_cnc_scrap: editingQuotation?.piece_price_cnc_scrap || null,
+        piece_weight_cnc_percentage: editingQuotation?.piece_weight_cnc_percentage || null,
         lead_time_days: editingQuotation?.lead_time_days || null,
         validity_days: editingQuotation?.validity_days || 30,
         notes: editingQuotation?.notes || '',
@@ -146,61 +220,85 @@ export default function QuotationFormModal({
   }, [isOpen, editingQuotation, partNumber.estimated_anual_units, form]);
 
   const onSubmit = async (data: QuotationFormData) => {
-    setError(null);
-
     try {
-      const quotationPayload = {
-        ...data,
+      setError(null);
+      
+      // Validate that we have a total price
+      if (!data.total_price || data.total_price <= 0) {
+        setError('Total price must be calculated and greater than 0. Please fill in the required fields.');
+        return;
+      }
+
+      const payload = {
+        parent_id: isCreatingVersionFrom ? editingQuotation?.id : null,
         part_number_id: partNumberId,
+        supplier_id: data.supplier_id,
+        status: data.status,
         unit_price: data.unit_price || null,
-        total_price: data.total_price || null,
+        total_price: data.total_price,
         quantity: data.quantity || null,
+        moq1: data.moq1 || null,
+        moq_margin_1: data.moq_margin_1 || null,
+        material_alloy: data.material_alloy || null,
+        cost_of_plate: data.cost_of_plate || null,
+        cavities: data.cavities || null,
+        rm_cnc_scrap: data.rm_cnc_scrap || null,
+        rm_cnc_margin: data.rm_cnc_margin || null,
+        rm_cnc_piece_price: data.rm_cnc_piece_price || null,
+        piece_weight_rm_cnc_percentage: data.piece_weight_rm_cnc_percentage || null,
+        cnc_machine: data.cnc_machine || null,
+        machine_cost_per_hour: data.machine_cost_per_hour || null,
+        cycle_time_sec: data.cycle_time_sec || null,
+        piece_price_cnc_no_scrap: data.piece_price_cnc_no_scrap || null,
+        piece_price_cnc_scrap: data.piece_price_cnc_scrap || null,
+        piece_weight_cnc_percentage: data.piece_weight_cnc_percentage || null,
         lead_time_days: data.lead_time_days || null,
         validity_days: data.validity_days || null,
         notes: data.notes || null,
         internal_notes: data.internal_notes || null,
+        created_by: null // Will be set by backend
       };
 
-      let response;
-
-      if (isNewVersion || isCreatingVersionFrom) {
-        // Create new version
-        const rootId = editingQuotation?.parent_id || editingQuotation?.id;
-        response = await createVersion(rootId!, quotationPayload);
+      let result;
+      if (isCreatingVersionFrom) {
+        const parentId = editingQuotation?.parent_id || editingQuotation?.id;
+        result = await createVersion(parentId!, payload);
       } else if (isEditing) {
-        // Update existing quotation
-        response = await updateQuotation(editingQuotation.id, quotationPayload);
+        result = await updateQuotation(editingQuotation!.id, payload);
       } else {
-        // Create new quotation
-        response = await createQuotation(quotationPayload);
+        result = await createQuotation(payload);
       }
 
-      if (response.error) {
-        setError(response.error);
+      if (result.error) {
+        setError(result.error);
         toast({
           title: "Error",
-          description: response.error,
+          description: result.error,
           variant: "destructive",
         });
         return;
       }
 
-      const action = (isNewVersion || isCreatingVersionFrom) ? 'Version created' : isEditing ? 'updated' : 'created';
       toast({
-        title: `Quotation ${action}`,
-        description: `Quotation for "${partNumber.part_name}" has been ${action} successfully.`,
+        title: "Success",
+        description: isCreatingVersionFrom 
+          ? "Quotation version created successfully!" 
+          : isEditing 
+          ? "Quotation updated successfully!" 
+          : "Quotation created successfully!",
       });
 
       onSuccess();
+      onClose();
     } catch (err) {
-      console.error('Error in quotation form:', err);
-      const errorMessage = 'An unexpected error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
+      console.error('Quotation submission error:', err);
     }
   };
 
@@ -267,153 +365,190 @@ export default function QuotationFormModal({
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Supplier */}
-                  <FormField
-                    control={control}
-                    name="supplier_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Supplier *</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value}
-                          disabled={isEditing && !isNewVersion}
-                        >
-                          <FormControl>
-                            <SelectTrigger {...{} as any}>
-                              <SelectValue placeholder="Select supplier" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent {...{} as any}>
-                            {suppliersLoading ? (
-                              <SelectItem value="loading" disabled {...{} as any}>
-                                Loading suppliers...
-                              </SelectItem>
-                            ) : (
-                              suppliers.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id} {...{} as any}>
-                                  {supplier.name}
-                                  {supplier.comercial_name && (
-                                    <span className="text-muted-foreground ml-2">
-                                      ({supplier.comercial_name})
-                                    </span>
-                                  )}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Status */}
-                  <FormField
-                    control={control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger {...{} as any}>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent {...{} as any}>
-                            <SelectItem value="draft" {...{} as any}>Draft</SelectItem>
-                            <SelectItem value="completed" {...{} as any}>Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Pricing Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Pricing Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Quantity */}
-                  <FormField
-                    control={control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantity</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="Enter quantity"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFormattedNumber(e.target.value))}
-                            value={formatNumber(field.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Unit Price */}
-                  <FormField
-                    control={control}
-                    name="unit_price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unit Price ($)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="Enter unit price"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFormattedNumber(e.target.value))}
-                            value={formatNumber(field.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Total Price */}
+                
+                {/* Total Price */}
+                <div className="mt-4 flex justify-end">
                   <FormField
                     control={control}
                     name="total_price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Total Price ($)</FormLabel>
+                        <FormLabel>Total Price</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100 text-lg font-semibold">
+                            {field.value ? `$${field.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">Auto-calculated from RM + CNC</span>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* General Data */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">General Data</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* EAU */}
+                  <FormField
+                    control={control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>EAU *</FormLabel>
                         <FormControl>
                           <Input
-                            type="text"
-                            placeholder="Enter total price"
+                            type="number"
+                            placeholder="Enter EAU"
                             {...field}
-                            onChange={(e) => field.onChange(parseFormattedNumber(e.target.value))}
-                            value={formatNumber(field.value)}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </CardContent>
-              </Card>
-            </div>
+
+                  {/* MOQ 1 */}
+                  <FormField
+                    control={control}
+                    name="moq1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MOQ 1</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter MOQ"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* MOQ Margin 1 */}
+                  <FormField
+                    control={control}
+                    name="moq_margin_1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MOQ Margin 1</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              placeholder="Enter margin (e.g., 5 for 5%)"
+                              className="pr-8"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) / 100 : null)}
+                              value={field.value ? (field.value * 100).toString() : ''}
+                            />
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                              %
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Raw Material Section */}
+            <QuotationRawMaterialSection
+              materialAlloys={materialAlloys}
+              partNumberCavities={partNumber.cavities}
+            />
+
+            {/* CNC Machining Section */}
+            <QuotationCNCMachiningSection
+              cncMachines={cncMachines}
+            />
+
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Supplier */}
+                <FormField
+                  control={control}
+                  name="supplier_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supplier *</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        disabled={isEditing && !isNewVersion}
+                      >
+                        <FormControl>
+                          <SelectTrigger {...{} as any}>
+                            <SelectValue placeholder="Select supplier" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent {...{} as any}>
+                          {suppliersLoading ? (
+                            <SelectItem value="loading" disabled {...{} as any}>
+                              Loading suppliers...
+                            </SelectItem>
+                          ) : (
+                            suppliers.map((supplier) => (
+                              <SelectItem key={supplier.id} value={supplier.id} {...{} as any}>
+                                {supplier.name}
+                                {supplier.comercial_name && (
+                                  <span className="text-muted-foreground ml-2">
+                                    ({supplier.comercial_name})
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Status */}
+                <FormField
+                  control={control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger {...{} as any}>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent {...{} as any}>
+                          <SelectItem value="draft" {...{} as any}>Draft</SelectItem>
+                          <SelectItem value="completed" {...{} as any}>Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
             {/* Additional Information */}
             <Card>
@@ -431,11 +566,11 @@ export default function QuotationFormModal({
                         <FormLabel>Lead Time (days)</FormLabel>
                         <FormControl>
                           <Input
-                            type="text"
+                            type="number"
                             placeholder="Enter lead time"
                             {...field}
-                            onChange={(e) => field.onChange(parseFormattedNumber(e.target.value))}
-                            value={formatNumber(field.value)}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -452,11 +587,11 @@ export default function QuotationFormModal({
                         <FormLabel>Validity (days)</FormLabel>
                         <FormControl>
                           <Input
-                            type="text"
+                            type="number"
                             placeholder="Enter validity period"
                             {...field}
-                            onChange={(e) => field.onChange(parseFormattedNumber(e.target.value))}
-                            value={formatNumber(field.value)}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -505,7 +640,7 @@ export default function QuotationFormModal({
               </CardContent>
             </Card>
 
-                        <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2">
               <Button
                 type="button"
                 variant="outline"

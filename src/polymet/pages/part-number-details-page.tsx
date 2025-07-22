@@ -224,7 +224,6 @@ export default function PartNumberDetailsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-y-2 sm:gap-x-6 text-sm text-muted-foreground pt-2 border-t">
                 {company && (
                   <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={company.image || undefined} />
@@ -232,7 +231,12 @@ export default function PartNumberDetailsPage() {
                           {company.name?.charAt(0) || 'C'}
                         </AvatarFallback>
                       </Avatar>
-                      <span>{company.name || "Unknown Company"}</span>
+                      <Link 
+                        to={`/customers/${company.id}`}
+                        className="hover:text-primary transition-colors"
+                      >
+                        {company.name || "Unknown Company"}
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -240,7 +244,12 @@ export default function PartNumberDetailsPage() {
                 {rfqData && (
                   <div className="flex items-center gap-2">
                     <FileTextIcon className="h-4 w-4" />
-                    <span>RFQ: {getRfqDisplayName(rfqData)}</span>
+                    <Link 
+                      to={`/rfqs/${rfqData.id}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      RFQ: {getRfqDisplayName(rfqData)}
+                    </Link>
                   </div>
                 )}
                 

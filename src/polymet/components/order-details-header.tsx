@@ -1,4 +1,4 @@
-import { CalendarIcon, FileTextIcon, UserIcon } from "lucide-react";
+import { CalendarIcon, FileTextIcon, Building2Icon } from "lucide-react";
 import { CncOrder } from "@/polymet/data/cnc-orders-data";
 import StatusBadge from "@/polymet/components/status-badge";
 
@@ -25,7 +25,7 @@ export default function OrderDetailsHeader({ order }: OrderDetailsHeaderProps) {
       {/* Order details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
         <div className="flex items-center gap-2">
-          <UserIcon className="h-5 w-5 text-muted-foreground" />
+          <Building2Icon className="h-5 w-5 text-muted-foreground" />
 
           <div>
             <div className="text-sm text-muted-foreground">Customer</div>

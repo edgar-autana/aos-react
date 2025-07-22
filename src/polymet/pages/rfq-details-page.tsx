@@ -100,7 +100,6 @@ export default function RfqDetailsPage() {
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-y-2 sm:gap-x-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <UserIcon className="h-4 w-4" />
                   <div className="flex items-center gap-2">
                     {company && (
                       <Avatar className="h-5 w-5">
@@ -110,9 +109,12 @@ export default function RfqDetailsPage() {
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    <span>
+                    <Link 
+                      to={`/customers/${rfq.company}`}
+                      className="hover:text-primary transition-colors"
+                    >
                       {company?.name || "Unknown Customer"}
-                    </span>
+                    </Link>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
