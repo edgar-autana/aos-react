@@ -16,9 +16,11 @@ import {
   ClipboardIcon,
   Contact,
   FactoryIcon,
+  PackageIcon,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { Toaster } from "@/components/ui/toaster";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -105,6 +107,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
       name: "Suppliers",
       path: "/suppliers",
       icon: <BuildingIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
+    },
+    {
+      name: "RM Suppliers",
+      path: "/rm-suppliers",
+      icon: <PackageIcon className="h-5 w-5" />,
       permissions: ["org:view:orders", "org:all:access"],
     },
     {
@@ -224,6 +232,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Main content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }
