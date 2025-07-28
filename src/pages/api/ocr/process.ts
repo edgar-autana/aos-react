@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-const OCR_API_KEY = "f1f68ea46a88957";
-const OCR_API_URL = "https://api.ocr.space/parse/image";
+const OCR_API_KEY = import.meta.env.VITE_OCR_KEY;
+const OCR_API_URL = "https://apipro1.ocr.space/parse/image";
 
 interface OCRWord {
   WordText: string;
@@ -46,8 +46,15 @@ interface PageData {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('🔍 OCR API - API Key:', OCR_API_KEY ? 'Set' : 'Not set');
+  console.log('🔍 OCR API - API Key length:', OCR_API_KEY?.length || 0);
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!OCR_API_KEY) {
+    return res.status(500).json({ error: 'OCR API key not configured. Please set VITE_OCR_KEY in your .env file.' });
   }
 
   try {

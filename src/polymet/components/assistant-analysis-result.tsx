@@ -3,22 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   FileText, 
-  Ruler, 
-  Settings, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
   Hash,
   Tag,
-  Zap,
-  Wrench,
-  Eye,
-  Target,
+  Ruler,
   Gauge,
-  Circle,
-  Square,
-  Triangle,
-  CornerDownRight
+  Wrench,
+  AlertTriangle
 } from "lucide-react";
 
 interface AssistantAnalysis {
@@ -49,256 +39,104 @@ interface AssistantAnalysisResultProps {
 }
 
 export default function AssistantAnalysisResult({ analysis }: AssistantAnalysisResultProps) {
-  const getProcessTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'cnc':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'casting':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  // Extract critical tolerances (<0.01)
+  const criticalTolerances = analysis.tolerances.filter(tol => {
+    const numMatch = tol.toString().match(/[±]?(\d+\.?\d*)/);
+    if (numMatch) {
+      const value = parseFloat(numMatch[1]);
+      return value < 0.01;
     }
-  };
+    return false;
+  });
 
-  const getProcessTypeIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'cnc':
-        return <Settings className="h-4 w-4" />;
-      case 'casting':
-        return <Zap className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
-    }
-  };
+  // Combine all manufacturing notes
+  const manufacturingNotes = [
+    ...analysis.special_requirements,
+    ...analysis.secondary_processes.map(p => `${p.process}: ${p.details}`),
+    ...(analysis.requires_deburring ? ['Deburring required'] : []),
+    ...(analysis.requires_cleaning ? ['Cleaning required'] : []),
+    ...(analysis.requires_engineering_review ? ['Engineering review required'] : []),
+    ...(analysis.has_thread ? [`Threading: ${analysis.thread_spec}`] : [])
+  ].filter(note => note && note.trim() !== '');
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            {analysis.part_name || 'Technical Drawing Analysis'}
-          </h2>
-          {analysis.part_number && (
-            <p className="text-muted-foreground mt-1">
-              Part Number: <span className="font-mono">{analysis.part_number}</span>
-            </p>
+    <div className="space-y-4">
+      {/* Prominent Header with Part Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {analysis.part_name || 'Technical Drawing Analysis'}
+              </h2>
+              {analysis.part_number && (
+                <p className="text-lg text-gray-600 dark:text-gray-400 font-mono">
+                  #{analysis.part_number}
+                </p>
+              )}
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {analysis.material || 'Material not specified'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {criticalTolerances.length > 0 && (
+            <Badge variant="destructive" className="flex items-center gap-1 px-3 py-2">
+              <AlertTriangle className="h-4 w-4" />
+              Critical Tolerances
+            </Badge>
           )}
         </div>
-        <Badge className={`px-3 py-1 text-sm font-medium ${getProcessTypeColor(analysis.process_type)}`}>
-          <div className="flex items-center gap-1">
-            {getProcessTypeIcon(analysis.process_type)}
-            {analysis.process_type.toUpperCase()}
-          </div>
-        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Material & Finish */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              Material & Finish
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <span className="text-xs text-muted-foreground">Material:</span>
-              <p className="font-medium">{analysis.material || 'Not specified'}</p>
-            </div>
-            {analysis.finish && (
-              <div>
-                <span className="text-xs text-muted-foreground">Finish:</span>
-                <p className="font-medium">{analysis.finish}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Dimensions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Ruler className="h-4 w-4" />
-              Dimensions ({analysis.dimensions.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-1">
-              {analysis.dimensions.slice(0, 9).map((dim, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {dim}
-                </Badge>
-              ))}
-              {analysis.dimensions.length > 9 && (
-                <Badge variant="outline" className="text-xs">
-                  +{analysis.dimensions.length - 9} more
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tolerances */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
+      {/* Critical Tolerances */}
+      {criticalTolerances.length > 0 && (
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Gauge className="h-4 w-4" />
-              Tolerances ({analysis.tolerances.length})
+              Critical Tolerances
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-1">
-              {analysis.tolerances.slice(0, 3).map((tol, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
+            <div className="flex flex-wrap gap-2">
+              {criticalTolerances.map((tol, index) => (
+                <Badge key={index} variant="destructive" className="text-xs">
                   {tol}
                 </Badge>
               ))}
-              {analysis.tolerances.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{analysis.tolerances.length - 3} more
-                </Badge>
-              )}
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* Threading */}
-        {analysis.has_thread && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Wrench className="h-4 w-4" />
-                Threading
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                {analysis.thread_spec || 'Threaded'}
-              </Badge>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Radii */}
-        {analysis.radii.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Circle className="h-4 w-4" />
-                Radii ({analysis.radii.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                {analysis.radii.map((radius, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {radius}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Angles */}
-        {analysis.angles.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <CornerDownRight className="h-4 w-4" />
-                Angles ({analysis.angles.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-1">
-                {analysis.angles.map((angle, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {angle}°
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Requirements */}
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Requirements & Processes
+      {/* Manufacturing Notes */}
+      {manufacturingNotes.length > 0 && (
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Wrench className="h-4 w-4" />
+              Manufacturing Notes
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {analysis.requires_deburring ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-gray-400" />
-                  )}
-                  <span className="text-sm">Deburring Required</span>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {manufacturingNotes.map((note, index) => (
+                <div key={index} className="text-xs p-2 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                  {note}
                 </div>
-                <div className="flex items-center gap-2">
-                  {analysis.requires_cleaning ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-gray-400" />
-                  )}
-                  <span className="text-sm">Cleaning Required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {analysis.requires_engineering_review ? (
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-gray-400" />
-                  )}
-                  <span className="text-sm">Engineering Review</span>
-                </div>
-              </div>
-              
-              {analysis.secondary_processes.length > 0 && (
-                <div>
-                  <span className="text-xs text-muted-foreground">Secondary Processes:</span>
-                  <div className="space-y-1 mt-1">
-                    {analysis.secondary_processes.map((process, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {process.process}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
-
-        {/* Special Requirements */}
-        {analysis.special_requirements.length > 0 && (
-          <Card className="md:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Special Requirements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {analysis.special_requirements.map((req, index) => (
-                  <div key={index} className="text-sm p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded border border-yellow-200 dark:border-yellow-800">
-                    {req}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      )}
     </div>
   );
 } 

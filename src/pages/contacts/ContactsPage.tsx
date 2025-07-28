@@ -276,7 +276,6 @@ export default function ContactsPage() {
                                   )}
                                 </div>
                               </td>
-
                             </tr>
                           ))
                         ) : (

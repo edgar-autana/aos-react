@@ -83,6 +83,16 @@ export default function CncOrderTrackerPrototype() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/technical-analysis"
+            element={
+              <ProtectedRoute permission={["org:view:dashboard", "org:all:access"]}>
+                <AppLayout>
+                  <TechnicalAnalysisPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/orders"

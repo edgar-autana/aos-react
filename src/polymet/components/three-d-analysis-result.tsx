@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface ThreeDAnalysisResult {
   bounding_box: {
@@ -32,138 +33,122 @@ interface ThreeDAnalysisResultProps {
 }
 
 export default function ThreeDAnalysisResult({ analysis }: ThreeDAnalysisResultProps) {
+  // Calculate volume more accurately using bounding box dimensions
+  const calculatedVolume = analysis.bounding_box.x.length * analysis.bounding_box.y.length * analysis.bounding_box.z.length;
+  const volumeToUse = analysis.volume > 0 ? analysis.volume : calculatedVolume;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold">3D Model Analysis</h2>
-        <p className="text-muted-foreground mt-1">
-          Geometric properties from 3D analysis
-        </p>
+    <div className="space-y-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-lg border">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+            <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              3D Model Analysis
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Precise geometric measurements
+            </p>
+          </div>
+        </div>
+        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+          {(volumeToUse / 1000).toFixed(1)} cm³
+        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Bounding Box */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Bounding Box</CardTitle>
+      {/* Compact Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Dimensions Card */}
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Dimensions
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">X Axis</div>
-                <div className="font-medium">{analysis.bounding_box.x.length.toFixed(1)} mm</div>
-                <div className="text-xs text-muted-foreground">
-                  {analysis.bounding_box.x.min.toFixed(1)} to {analysis.bounding_box.x.max.toFixed(1)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">Y Axis</div>
-                <div className="font-medium">{analysis.bounding_box.y.length.toFixed(1)} mm</div>
-                <div className="text-xs text-muted-foreground">
-                  {analysis.bounding_box.y.min.toFixed(1)} to {analysis.bounding_box.y.max.toFixed(1)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">Z Axis</div>
-                <div className="font-medium">{analysis.bounding_box.z.length.toFixed(1)} mm</div>
-                <div className="text-xs text-muted-foreground">
-                  {analysis.bounding_box.z.min.toFixed(1)} to {analysis.bounding_box.z.max.toFixed(1)}
-                </div>
-              </div>
+          <CardContent className="space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-500">Length:</span>
+              <span className="text-sm font-medium">{analysis.bounding_box.x.length.toFixed(1)} mm</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-500">Width:</span>
+              <span className="text-sm font-medium">{analysis.bounding_box.y.length.toFixed(1)} mm</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-500">Height:</span>
+              <span className="text-sm font-medium">{analysis.bounding_box.z.length.toFixed(1)} mm</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Center of Mass */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Center of Mass</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">X</div>
-                <div className="font-medium">{analysis.center_of_mass.x.toFixed(1)} mm</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">Y</div>
-                <div className="font-medium">{analysis.center_of_mass.y.toFixed(1)} mm</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground">Z</div>
-                <div className="font-medium">{analysis.center_of_mass.z.toFixed(1)} mm</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Volume */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Volume</CardTitle>
+        {/* Volume Card */}
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              Volume
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {analysis.volume.toLocaleString()} mm³
+              <div className="text-lg font-bold text-purple-600">
+                {(volumeToUse / 1000).toFixed(1)} cm³
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {(analysis.volume / 1000).toFixed(2)} cm³
+              <div className="text-xs text-gray-500">
+                {volumeToUse.toLocaleString()} mm³
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Surface Area */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Surface Area</CardTitle>
+        {/* Surface Area Card */}
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              Surface Area
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-lg font-bold text-green-600">
+                {(analysis.surface_area / 100).toFixed(1)} cm²
+              </div>
+              <div className="text-xs text-gray-500">
                 {analysis.surface_area.toLocaleString()} mm²
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {(analysis.surface_area / 100).toFixed(2)} cm²
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Surface to Volume Ratio */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Surface/Volume Ratio</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {(analysis.surface_area / analysis.volume).toFixed(3)}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                mm²/mm³
-              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Analysis Summary</CardTitle>
+      {/* Summary Card */}
+      <Card className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm text-gray-700 dark:text-gray-300">
+            Summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground space-y-2">
+          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <p>
-              This 3D model has a volume of <span className="font-medium">{analysis.volume.toLocaleString()} mm³</span> 
-              and a surface area of <span className="font-medium">{analysis.surface_area.toLocaleString()} mm²</span>.
+              Volume: <span className="font-medium">{(volumeToUse / 1000).toFixed(1)} cm³</span> • 
+              Surface: <span className="font-medium">{(analysis.surface_area / 100).toFixed(1)} cm²</span>
             </p>
             <p>
-              The bounding box dimensions are {analysis.bounding_box.x.length.toFixed(1)} × {analysis.bounding_box.y.length.toFixed(1)} × {analysis.bounding_box.z.length.toFixed(1)} mm,
-              with the center of mass located at ({analysis.center_of_mass.x.toFixed(1)}, {analysis.center_of_mass.y.toFixed(1)}, {analysis.center_of_mass.z.toFixed(1)}) mm.
+              Dimensions: <span className="font-medium">{analysis.bounding_box.x.length.toFixed(1)} × {analysis.bounding_box.y.length.toFixed(1)} × {analysis.bounding_box.z.length.toFixed(1)} mm</span>
             </p>
           </div>
         </CardContent>
