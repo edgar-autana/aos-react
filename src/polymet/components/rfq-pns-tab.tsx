@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableLoading } from "@/components/ui/loading";
-import { FileTextIcon, CalendarIcon, EyeIcon, PlusIcon, UserIcon } from "lucide-react";
+import { FileTextIcon, CalendarIcon, EyeIcon, PlusIcon, UserIcon, FileIcon, DownloadIcon, FileImageIcon } from "lucide-react";
 import { usePartNumbersByRfqPaginated } from "@/hooks/part-number/usePartNumbers";
 import { PartNumber } from "@/types/part-number/partNumber";
 import { formatNumber } from "@/utils/dateUtils";
@@ -80,14 +80,13 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                 <table className="w-full table-auto">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left p-4 font-medium">Part Name</th>
-                      <th className="text-left p-4 font-medium">Part Number</th>
-                      <th className="text-left p-4 font-medium">Core</th>
+                      <th className="text-left p-4 font-medium">Name</th>
+                      <th className="text-left p-4 font-medium">Drawing Number</th>
+                      <th className="text-left p-4 font-medium">Process</th>
                       <th className="text-left p-4 font-medium">Feasibility</th>
-                      <th className="text-left p-4 font-medium">2D</th>
+                      <th className="text-left p-4 font-medium">Documents</th>
                       <th className="text-left p-4 font-medium">EAU</th>
                       <th className="text-left p-4 font-medium">Piece Price</th>
-                      <th className="text-left p-4 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -95,7 +94,9 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                       partNumbers.map((partNumber: PartNumber) => (
                         <tr key={partNumber.id} className="hover:bg-muted/50">
                           <td className="p-4">
-                            <div className="font-medium">{getPartNumberDisplayName(partNumber)}</div>
+                            <Link to={`/part-number/${partNumber.id}`} className="font-medium hover:text-primary transition-colors">
+                              {getPartNumberDisplayName(partNumber)}
+                            </Link>
                           </td>
                           <td className="p-4">
                             <div className="text-sm font-mono">
@@ -115,8 +116,32 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                             </div>
                           </td>
                           <td className="p-4">
-                            <div className="text-sm">
-                            PDF
+                            <div className="flex flex-col gap-1">
+                              {partNumber.part_drawing_2d && (
+                                <a
+                                  href={partNumber.part_drawing_2d}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                                >
+                                  <FileTextIcon className="h-3 w-3" />
+                                  2D Drawing
+                                </a>
+                              )}
+                              {partNumber.part_drawing_3d && (
+                                <a
+                                  href={partNumber.part_drawing_3d}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                  <FileImageIcon className="h-3 w-3" />
+                                  3D Model
+                                </a>
+                              )}
+                              {!partNumber.part_drawing_2d && !partNumber.part_drawing_3d && (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              )}
                             </div>
                           </td>
                           <td className="p-4">
@@ -127,16 +152,6 @@ export default function RfqPnsTab({ rfqId }: RfqPnsTabProps) {
                           <td className="p-4">
                             <div className="text-sm">
                               {formatNumber(partNumber.piece_price)}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link to={`/part-number/${partNumber.id}`}>
-                                  <EyeIcon className="h-4 w-4 mr-1" />
-                                  View
-                                </Link>
-                              </Button>
                             </div>
                           </td>
                         </tr>

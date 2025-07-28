@@ -161,6 +161,15 @@ export const s3Service = {
     });
   },
 
+  // Upload RM supplier profile image
+  async uploadRMSupplierImage(file: File, supplierId: string): Promise<UploadResponse> {
+    return this.uploadFile({
+      file,
+      folder: `rm-suppliers/${supplierId}/profile`,
+      contentType: file.type
+    });
+  },
+
   // Delete file from S3
   async deleteFile(key: string): Promise<boolean> {
     try {

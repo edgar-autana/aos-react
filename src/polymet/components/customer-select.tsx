@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, ChevronsUpDownIcon, SearchIcon, UserIcon } from "lucide-react";
+import { Check, ChevronsUpDownIcon, SearchIcon, Building2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -66,7 +66,7 @@ export default function CustomerSelect({
             </div>
           ) : (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <UserIcon className="h-4 w-4" />
+              <Building2Icon className="h-4 w-4" />
 
               <span>Select a customer</span>
             </div>

@@ -218,7 +218,6 @@ export default function ContactsPage() {
                           <th className="text-left p-4 font-medium">Company</th>
                           <th className="text-left p-4 font-medium">Supplier</th>
                           <th className="text-left p-4 font-medium">Status</th>
-                          <th className="text-left p-4 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -226,15 +225,17 @@ export default function ContactsPage() {
                           paginatedContacts.map((contact) => (
                             <tr key={contact.id} className="hover:bg-muted/50">
                               <td className="p-4">
-                                <Avatar className="h-10 w-10 border cursor-pointer hover:opacity-80 transition-opacity">
-                                  {contact.image ? (
-                                    <AvatarImage src={contact.image} alt={`${contact.name} ${contact.last_name}`} />
-                                  ) : (
-                                    <AvatarFallback>
-                                      {getInitials(contact)}
-                                    </AvatarFallback>
-                                  )}
-                                </Avatar>
+                                <Link to={`/contacts/${contact.id}`}>
+                                  <Avatar className="h-10 w-10 border cursor-pointer hover:opacity-80 transition-opacity">
+                                    {contact.image ? (
+                                      <AvatarImage src={contact.image} alt={`${contact.name} ${contact.last_name}`} />
+                                    ) : (
+                                      <AvatarFallback>
+                                        {getInitials(contact)}
+                                      </AvatarFallback>
+                                    )}
+                                  </Avatar>
+                                </Link>
                               </td>
                               <td className="p-4">
                                 <div className="font-medium">
@@ -275,21 +276,11 @@ export default function ContactsPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="p-4">
-                                <div className="flex gap-2">
-                                  <Button variant="outline" size="sm" asChild>
-                                    <Link to={`/contacts/${contact.id}`}>
-                                      <EyeIcon className="h-4 w-4 mr-1" />
-                                      View
-                                    </Link>
-                                  </Button>
-                                </div>
-                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={7} className="text-center py-8">
+                            <td colSpan={6} className="text-center py-8">
                               <div className="text-muted-foreground">
                                 <div className="mb-4">
                                   <UserIcon className="w-12 h-12 mx-auto text-muted-foreground/50" />

@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +25,18 @@ import { PartNumber } from "@/types/part-number/partNumber";
 import { RFQWithCompany } from "@/types/rfq/rfq";
 import { getRfqDisplayName, getRfqStatusColor, getRfqStatusText, formatRfqDate } from "@/utils/rfq/rfqUtils";
 import PartNumberAnalysisForm from "@/polymet/components/part-number-analysis-form";
+import PartNumberQuotesTab from "@/polymet/components/part-number-quotes-tab";
 
 export default function PartNumberDetailsPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [rfqData, setRfqData] = useState<RFQWithCompany | null>(null);
   const [rfqLoading, setRfqLoading] = useState(false);
   const [rfqError, setRfqError] = useState<string | null>(null);
+  
+  // Get quotation ID from URL params for auto-opening edit modal
+  const quotationId = searchParams.get('quotation');
 
   // Fetch part number by ID
   const { partNumber, loading: partLoading, error: partError } = usePartNumber(id);
@@ -39,8 +44,12 @@ export default function PartNumberDetailsPage() {
   // Fetch RFQ data when part number is loaded
   useEffect(() => {
     const fetchRfqData = async () => {
-      if (!partNumber?.rfq) return;
+      if (!partNumber?.rfq) {
+        console.log('No RFQ found for part number:', partNumber);
+        return;
+      }
 
+      console.log('Fetching RFQ data for RFQ ID:', partNumber.rfq);
       setRfqLoading(true);
       setRfqError(null);
 
@@ -50,11 +59,14 @@ export default function PartNumberDetailsPage() {
         const response = await rfqApi.getByIdWithCompany(partNumber.rfq);
 
         if (response.error) {
+          console.error('Error fetching RFQ:', response.error);
           setRfqError(response.error);
         } else {
+          console.log('RFQ data loaded successfully:', response.data);
           setRfqData(response.data);
         }
       } catch (error) {
+        console.error('Exception fetching RFQ:', error);
         setRfqError('Failed to fetch RFQ information');
       } finally {
         setRfqLoading(false);
@@ -148,16 +160,31 @@ export default function PartNumberDetailsPage() {
   return (
     <div className="container mx-auto space-y-6">
       {/* Back button */}
-      {rfqData && (
+      {rfqData ? (
         <Button 
           variant="ghost" 
           className="pl-0 mb-2" 
-          onClick={() => navigate(`/rfq/${rfqData.id}`)}
+          onClick={() => {
+            console.log('Navigating to RFQ:', rfqData.id);
+            navigate(`/rfqs/${rfqData.id}`);
+          }}
         >
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back to RFQ
         </Button>
-      )}
+      ) : partNumber?.rfq ? (
+        <Button 
+          variant="ghost" 
+          className="pl-0 mb-2" 
+          onClick={() => {
+            console.log('Navigating to RFQ with fallback ID:', partNumber.rfq);
+            navigate(`/rfqs/${partNumber.rfq}`);
+          }}
+        >
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to RFQ
+        </Button>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold">Part Number Details</h1>
@@ -197,7 +224,6 @@ export default function PartNumberDetailsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-y-2 sm:gap-x-6 text-sm text-muted-foreground pt-2 border-t">
                 {company && (
                   <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={company.image || undefined} />
@@ -205,7 +231,12 @@ export default function PartNumberDetailsPage() {
                           {company.name?.charAt(0) || 'C'}
                         </AvatarFallback>
                       </Avatar>
-                      <span>{company.name || "Unknown Company"}</span>
+                      <Link 
+                        to={`/customers/${company.id}`}
+                        className="hover:text-primary transition-colors"
+                      >
+                        {company.name || "Unknown Company"}
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -213,7 +244,12 @@ export default function PartNumberDetailsPage() {
                 {rfqData && (
                   <div className="flex items-center gap-2">
                     <FileTextIcon className="h-4 w-4" />
-                    <span>RFQ: {getRfqDisplayName(rfqData)}</span>
+                    <Link 
+                      to={`/rfqs/${rfqData.id}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      RFQ: {getRfqDisplayName(rfqData)}
+                    </Link>
                   </div>
                 )}
                 
@@ -224,11 +260,6 @@ export default function PartNumberDetailsPage() {
                   </div>
                 )}
               </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline">Edit Part</Button>
-              <Button variant="default">Generate Quote</Button>
             </div>
           </div>
         </CardContent>
@@ -242,21 +273,25 @@ export default function PartNumberDetailsPage() {
         </TabsList>
 
         <TabsContent value="quotes" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quotes</CardTitle>
-              <CardDescription>
-                Quotes and pricing information for this part number
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Package2Icon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-lg font-medium">No quotes available</p>
-                <p className="text-sm">Quotes for this part number will appear here.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <PartNumberQuotesTab 
+            partNumberId={id} 
+            partNumber={{
+              id: partNumber.id,
+              part_name: partNumber.part_name || 'Unknown Part',
+              drawing_number: partNumber.drawing_number || 'Unknown',
+              estimated_anual_units: partNumber.estimated_anual_units || undefined
+            }}
+            companyInfo={rfqData?.company_info ? {
+              id: rfqData.company_info.id,
+              name: rfqData.company_info.name,
+              image: rfqData.company_info.image || undefined
+            } : null}
+            rfqInfo={rfqData ? {
+              id: rfqData.id,
+              name: rfqData.name || 'Unknown RFQ'
+            } : null}
+            initialQuotationId={quotationId}
+          />
         </TabsContent>
 
         <TabsContent value="analysis" className="space-y-6 mt-6">

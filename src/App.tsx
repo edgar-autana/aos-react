@@ -8,6 +8,8 @@ import CustomersPage from "@/polymet/components/customers-page";
 import CustomerProfilePage from "@/polymet/components/customer-profile-page";
 import SuppliersPage from "@/polymet/components/suppliers-page";
 import SupplierProfilePage from "@/polymet/components/supplier-profile-page";
+import RMSuppliersPage from "@/polymet/components/rm-suppliers-page";
+import RMSupplierProfilePage from "@/polymet/components/rm-supplier-profile-page";
 import TechnicalAnalysisPage from "@/polymet/pages/technical-analysis-page";
 import RfqsPage from "@/polymet/pages/rfqs-page";
 import CreateRfqPage from "@/polymet/pages/create-rfq-page";
@@ -81,6 +83,16 @@ export default function CncOrderTrackerPrototype() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/technical-analysis"
+            element={
+              <ProtectedRoute permission={["org:view:dashboard", "org:all:access"]}>
+                <AppLayout>
+                  <TechnicalAnalysisPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/orders"
@@ -143,6 +155,28 @@ export default function CncOrderTrackerPrototype() {
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
                   <SupplierProfilePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rm-suppliers"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <RMSuppliersPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rm-suppliers/:supplierId"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <RMSupplierProfilePage />
                 </AppLayout>
               </ProtectedRoute>
             }
