@@ -206,6 +206,9 @@ export const partNumberApi = {
   // Update part number
   async update(id: string, partNumber: Partial<PartNumberPayload>): Promise<ApiResponse<PartNumber>> {
     try {
+      console.log('Updating part number with ID:', id);
+      console.log('Update payload:', partNumber);
+      
       const { data, error } = await supabase
         .from('tb_part_number')
         .update(partNumber)
@@ -215,9 +218,11 @@ export const partNumberApi = {
 
       if (error) {
         console.error('Error updating part number:', error);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
         return { data: null, error: error.message };
       }
 
+      console.log('Update successful, returned data:', data);
       return { data, error: null };
     } catch (err) {
       console.error('Exception in update:', err);

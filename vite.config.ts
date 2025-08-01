@@ -35,7 +35,22 @@ export default defineConfig({
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         },
-      }
+      },
+      // '/api/aps': {
+      //   target: process.env.VITE_API_3D_BASE_URL || 'http://localhost:3001',
+      //   changeOrigin: true,
+      //   configure: (proxy, options) => {
+      //     proxy.on('error', (err, req, res) => {
+      //       console.log('3D API proxy error', err);
+      //     });
+      //     proxy.on('proxyReq', (proxyReq, req, res) => {
+      //       console.log('Sending Request to 3D API:', req.method, req.url);
+      //     });
+      //     proxy.on('proxyRes', (proxyRes, req, res) => {
+      //       console.log('Received Response from 3D API:', proxyRes.statusCode, req.url);
+      //     });
+      //   },
+      // }
     }
   },
   optimizeDeps: {

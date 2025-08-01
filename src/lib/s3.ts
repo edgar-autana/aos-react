@@ -34,6 +34,7 @@ export interface UploadResponse {
   success: boolean;
   url?: string;
   key?: string;
+  originalFilename?: string;
   error?: string;
 }
 
@@ -62,9 +63,10 @@ export const s3Service = {
       
       const { file, folder = '', customFilename } = options;
       
-      // Generate unique filename with UUID
-      const fileExtension = file.name.split('.').pop();
-      const filename = customFilename || `${crypto.randomUUID()}.${fileExtension}`;
+      // Generate unique filename by concatenating UUID with original filename
+      const originalFilename = file.name;
+      const uuid = crypto.randomUUID();
+      const filename = customFilename || `${uuid}_${originalFilename}`;
       key = folder ? `${folder}/${filename}` : filename;
       
       // Create S3 client
@@ -99,6 +101,7 @@ export const s3Service = {
         success: true,
         url,
         key,
+        originalFilename,
         error: undefined
       };
       

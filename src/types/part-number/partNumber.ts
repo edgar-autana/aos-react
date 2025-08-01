@@ -39,6 +39,7 @@ export interface PartNumber {
   remove_inbox: boolean;
   part_drawing_2d: string | null; // 2D drawing file URL
   part_drawing_3d: string | null; // 3D drawing file URL
+  urn: string | null; // 3D viewer URN reference
   reason_feasibility: string | null; // Reason for feasibility (when CAN NOT DO)
   cavities: number | null; // Number of cavities
   mold_life: number | null; // Mold life
@@ -85,6 +86,7 @@ export interface PartNumberPayload {
   remove_inbox?: boolean;
   part_drawing_2d?: string | null; // 2D drawing file URL
   part_drawing_3d?: string | null; // 3D drawing file URL
+  urn?: string | null; // 3D viewer URN reference
   reason_feasibility?: string | null; // Reason for feasibility (when CAN NOT DO)
   cavities?: number | null; // Number of cavities
   mold_life?: number | null; // Mold life
