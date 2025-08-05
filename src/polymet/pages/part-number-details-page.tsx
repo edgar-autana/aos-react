@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +15,7 @@ import {
   FileTextIcon,
   UserIcon,
   Package2Icon,
+  BrainIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,20 +27,41 @@ import { RFQWithCompany } from "@/types/rfq/rfq";
 import { getRfqDisplayName, getRfqStatusColor, getRfqStatusText, formatRfqDate } from "@/utils/rfq/rfqUtils";
 import PartNumberAnalysisForm from "@/polymet/components/part-number-analysis-form";
 import PartNumberQuotesTab from "@/polymet/components/part-number-quotes-tab";
+import AIAnalysisModal from "@/polymet/components/ai-analysis-modal";
 
 export default function PartNumberDetailsPage() {
   const { id = "" } = useParams();
+  console.log('🔄 PartNumberDetailsPage rendering - id:', id);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [rfqData, setRfqData] = useState<RFQWithCompany | null>(null);
   const [rfqLoading, setRfqLoading] = useState(false);
   const [rfqError, setRfqError] = useState<string | null>(null);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   
   // Get quotation ID from URL params for auto-opening edit modal
   const quotationId = searchParams.get('quotation');
 
   // Fetch part number by ID
-  const { partNumber, loading: partLoading, error: partError } = usePartNumber(id);
+  const { partNumber, loading: partLoading, error: partError, refetch: refetchPartNumber } = usePartNumber(id);
+  
+  // Memoize the refetch function to prevent unnecessary re-renders - DISABLED to prevent infinite loop
+  // const memoizedRefetch = useCallback(() => {
+  //   console.log('🔄 PartNumberDetailsPage memoizedRefetch called');
+  //   refetchPartNumber();
+  // }, [refetchPartNumber]);
+
+  // Memoize the part number object to prevent unnecessary re-renders
+  const memoizedPartNumber = useMemo(() => {
+    console.log('🔄 PartNumberDetailsPage memoizedPartNumber recalculating - partNumber.id:', partNumber?.id);
+    if (!partNumber) return null;
+    return {
+      id: partNumber.id,
+      part_drawing_2d: partNumber.part_drawing_2d,
+      part_name: partNumber.part_name,
+      drawing_number: partNumber.drawing_number
+    };
+  }, [partNumber?.id, partNumber?.part_drawing_2d, partNumber?.part_name, partNumber?.drawing_number]);
 
   // Fetch RFQ data when part number is loaded
   useEffect(() => {
@@ -193,8 +215,8 @@ export default function PartNumberDetailsPage() {
       {/* Part Number Header */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-semibold">{getPartNumberDisplayName(partNumber)}</h2>
                 {partNumber.main_process && (
@@ -261,6 +283,34 @@ export default function PartNumberDetailsPage() {
                 )}
               </div>
             </div>
+
+            {/* AI Analysis Button */}
+            <div className="flex flex-col gap-2 md:items-end">
+              <Button
+                onClick={() => {
+                  console.log('🔄 PartNumberDetailsPage AI Analysis button clicked - setting showAIAnalysis to true');
+                  setShowAIAnalysis(true);
+                }}
+                disabled={!partNumber.part_drawing_2d}
+                className={`gap-2 ${
+                  partNumber.part_drawing_2d 
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl" 
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                } transition-all duration-200`}
+                size="lg"
+              >
+                <BrainIcon className="h-5 w-5" />
+                AI Analysis
+              </Button>
+              <p className={`text-xs text-center md:text-right ${
+                partNumber.part_drawing_2d ? "text-muted-foreground" : "text-gray-400"
+              }`}>
+                {partNumber.part_drawing_2d 
+                  ? "Analyze technical drawing with AI" 
+                  : "Upload a 2D drawing to enable AI Analysis"
+                }
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -269,7 +319,7 @@ export default function PartNumberDetailsPage() {
       <Tabs defaultValue="quotes" className="mt-6">
         <TabsList className="grid w-full grid-cols-2 md:w-auto">
           <TabsTrigger value="quotes">QUOTES</TabsTrigger>
-          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="analysis">DETAILS</TabsTrigger>
         </TabsList>
 
         <TabsContent value="quotes" className="space-y-6 mt-6">
@@ -298,6 +348,18 @@ export default function PartNumberDetailsPage() {
           <PartNumberAnalysisForm />
         </TabsContent>
       </Tabs>
+
+      {/* AI Analysis Modal */}
+      {memoizedPartNumber && (
+        <AIAnalysisModal
+          isOpen={showAIAnalysis}
+          onClose={() => {
+            console.log('🔄 PartNumberDetailsPage AI Analysis modal onClose called - setting showAIAnalysis to false');
+            setShowAIAnalysis(false);
+          }}
+          partNumber={memoizedPartNumber}
+        />
+      )}
     </div>
   );
 } 

@@ -191,6 +191,30 @@ export default function PartNumberAnalysisForm() {
         throw new Error(response.error);
       }
 
+      // If it's a 2D PDF, automatically create a new conversation
+      if (fieldName === 'part_drawing_2d' && uploadResult.url) {
+        console.log('2D PDF uploaded, automatically creating new conversation...');
+        try {
+          const { conversationService } = await import('@/polymet/services/conversation-service');
+          const conversationResponse = await conversationService.createConversation({
+            part_number_id: partNumber.id,
+            document_url: uploadResult.url,
+            title: `Analysis - ${partNumber.part_name || partNumber.drawing_number || `Part ${partNumber.id}`}`,
+            initial_message: "", // Empty message so no initial message appears in chat
+            is_active_document: true
+          });
+          
+          if (conversationResponse.success) {
+            console.log('New conversation created:', conversationResponse.conversation?.id);
+          } else {
+            console.warn('Failed to create conversation');
+          }
+        } catch (conversationError) {
+          console.error('Error creating conversation:', conversationError);
+          // Don't throw error here, as the file upload was successful
+        }
+      }
+
       toast({
         title: "File Uploaded",
         description: `${fieldName === 'part_drawing_2d' ? '2D Drawing' : '3D Model'} has been uploaded successfully.`,

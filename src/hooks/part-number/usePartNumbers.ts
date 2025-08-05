@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { partNumberApi } from '@/services/part-number/partNumberApi';
 import { PartNumber, PartNumberFilters } from '@/types/part-number/partNumber';
 
@@ -8,7 +8,7 @@ export function usePartNumbers(filters?: PartNumberFilters) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPartNumbers = async () => {
+  const fetchPartNumbers = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -25,7 +25,7 @@ export function usePartNumbers(filters?: PartNumberFilters) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     fetchPartNumbers();
@@ -45,7 +45,7 @@ export function usePartNumbersByRfq(rfqId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPartNumbers = async () => {
+  const fetchPartNumbers = useCallback(async () => {
     if (!rfqId) return;
     
     setLoading(true);
@@ -64,7 +64,7 @@ export function usePartNumbersByRfq(rfqId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [rfqId]);
 
   useEffect(() => {
     fetchPartNumbers();
@@ -93,7 +93,7 @@ export function usePartNumbersByRfqPaginated(
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const fetchPartNumbers = async (page: number = currentPage, size: number = pageSize) => {
+  const fetchPartNumbers = useCallback(async (page: number = currentPage, size: number = pageSize) => {
     if (!rfqId) return;
     
     setLoading(true);
@@ -114,18 +114,18 @@ export function usePartNumbersByRfqPaginated(
     } finally {
       setLoading(false);
     }
-  };
+  }, [rfqId, currentPage, pageSize, filters]);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     fetchPartNumbers(page, pageSize);
-  };
+  }, [fetchPartNumbers, pageSize]);
 
-  const handlePageSizeChange = (size: number) => {
+  const handlePageSizeChange = useCallback((size: number) => {
     setPageSize(size);
     setCurrentPage(1);
     fetchPartNumbers(1, size);
-  };
+  }, [fetchPartNumbers]);
 
   useEffect(() => {
     fetchPartNumbers();
@@ -151,7 +151,7 @@ export function usePartNumbersByCompany(companyId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPartNumbers = async () => {
+  const fetchPartNumbers = useCallback(async () => {
     if (!companyId) return;
     
     setLoading(true);
@@ -170,7 +170,7 @@ export function usePartNumbersByCompany(companyId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [companyId]);
 
   useEffect(() => {
     fetchPartNumbers();
@@ -190,7 +190,7 @@ export function usePartNumber(id: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPartNumber = async () => {
+  const fetchPartNumber = useCallback(async () => {
     if (!id) return;
     
     setLoading(true);
@@ -209,7 +209,7 @@ export function usePartNumber(id: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchPartNumber();
