@@ -32,6 +32,7 @@ interface AIAssistantChatProps {
   conversationId?: string | null;
   onConversationChange?: (conversationId: string) => void;
   loading?: boolean;
+  selectedModel?: string;
 }
 
 export default function AIAssistantChat({
@@ -41,7 +42,8 @@ export default function AIAssistantChat({
   onClearSelection,
   conversationId,
   onConversationChange,
-  loading: externalLoading = false
+  loading: externalLoading = false,
+  selectedModel = 'gpt-4o'
 }: AIAssistantChatProps) {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -107,6 +109,7 @@ export default function AIAssistantChat({
       role: 'user',
       content: messageContent,
       message_order: messages.length + 1,
+      model: selectedModel,
       created_at: new Date().toISOString()
     };
 
@@ -123,6 +126,7 @@ export default function AIAssistantChat({
         response = await conversationService.addMessage(conversation.id, {
           role: 'user',
           content: messageContent,
+          model: selectedModel,
           metadata: { 
             timestamp: new Date().toISOString(),
             hasSelectedRegion: !!selectedRegion,
@@ -201,6 +205,13 @@ export default function AIAssistantChat({
     }
   };
 
+  // Filter messages by selected model
+  const filteredMessages = messages.filter(message => {
+    // For both user and assistant messages, check if model matches
+    const messageModel = message.model || message.model_used || 'gpt-4o'; // Default to gpt-4o if null
+    return messageModel === selectedModel;
+  });
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -209,7 +220,7 @@ export default function AIAssistantChat({
         scrollElement.scrollTop = scrollElement.scrollHeight;
       }
     }
-  }, [messages, isTyping]);
+  }, [filteredMessages, isTyping]);
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -304,7 +315,7 @@ export default function AIAssistantChat({
               <p className="text-sm text-gray-500">Loading conversation...</p>
             </div>
           </div>
-        ) : messages.length === 0 ? (
+        ) : filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500">
             <FileTextIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p>Start a conversation about this document</p>
@@ -313,11 +324,12 @@ export default function AIAssistantChat({
         ) : (
           // Render conversation messages with VisualMessage
           <div className="space-y-2">
-            {messages.map((message, index) => (
+            {filteredMessages.map((message, index) => (
               <div key={message.id || index}>
                 <VisualMessage
                   content={message.content}
                   role={message.role}
+                  model={message.model || message.model_used}
                 />
                 <div className={`text-xs px-3 ${
                   message.role === 'user' ? 'text-right text-blue-600' : 'text-left text-gray-500 ml-11'
@@ -359,7 +371,7 @@ export default function AIAssistantChat({
           </Button>
         </div>
         
-        {messages.length > 0 && (
+        {filteredMessages.length > 0 && (
           <div className="flex justify-center mt-2">
             <Button
               variant="ghost"

@@ -14,6 +14,7 @@ export interface Message {
   message_order: number;
   tokens_used?: number;
   model_used?: string;
+  model?: string; // New field for frontend-supplied model
   processing_time_ms?: number;
   confidence_score?: number;
   created_at: string;
@@ -166,6 +167,7 @@ export class ConversationAPI {
     messageData: {
       role: 'user' | 'assistant';
       content: string;
+      model?: string;
       metadata?: Record<string, any>;
     }
   ): Promise<AddMessageResponse> {

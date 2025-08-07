@@ -21,6 +21,7 @@ export interface ConversationServiceInterface {
   addMessage(conversationId: string, messageData: {
     role: 'user' | 'assistant';
     content: string;
+    model?: string;
     metadata?: Record<string, any>;
   }): Promise<AddMessageResponse>;
 }
@@ -72,6 +73,7 @@ export class ConversationService implements ConversationServiceInterface {
     messageData: {
       role: 'user' | 'assistant';
       content: string;
+      model?: string;
       metadata?: Record<string, any>;
     }
   ): Promise<AddMessageResponse> {

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { XIcon, BrainIcon, HistoryIcon } from "lucide-react";
+import { XIcon, BrainIcon, HistoryIcon, CpuIcon } from "lucide-react";
 import AIAnalysisTab from './ai-analysis-tab';
 import { conversationService, ConversationHistory } from '../services/conversation-service';
 
@@ -29,6 +29,7 @@ export default function AIAnalysisModal({
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
   // const hasRefreshedRef = useRef(false); // DISABLED since refresh is disabled
 
   const handleClose = useCallback(() => {
@@ -285,6 +286,27 @@ export default function AIAnalysisModal({
               </Select>
             </div>
             
+            {/* Model filter dropdown */}
+            <div className="flex items-center gap-2 relative z-50">
+              <CpuIcon className="h-4 w-4 text-muted-foreground" />
+              <Select 
+                value={selectedModel} 
+                onValueChange={setSelectedModel}
+              >
+                <SelectTrigger className="w-36 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gpt-4o" className="text-xs">
+                    GPT-4o
+                  </SelectItem>
+                  <SelectItem value="claude-3-5-sonnet-20241022" className="text-xs">
+                    Claude 3.5 Sonnet
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             <Button
               variant="ghost"
               size="icon"
@@ -304,6 +326,7 @@ export default function AIAnalysisModal({
             currentConversationId={currentConversationId}
             onConversationChange={handleNewConversation}
             documentUrl={currentDocumentUrl}
+            selectedModel={selectedModel}
           />
         </div>
       </DialogContent>

@@ -14,6 +14,7 @@ interface AIAnalysisTabProps {
   currentConversationId?: string | null;
   onConversationChange?: (conversationId: string) => void;
   documentUrl?: string | null; // Override document URL for historical conversations
+  selectedModel?: string;
 }
 
 interface SelectedRegion {
@@ -30,7 +31,8 @@ export default function AIAnalysisTab({
   isModal = false,
   currentConversationId,
   onConversationChange,
-  documentUrl
+  documentUrl,
+  selectedModel
 }: AIAnalysisTabProps) {
   const [selectedRegion, setSelectedRegion] = useState<SelectedRegion | null>(null);
   const [regionSnapshot, setRegionSnapshot] = useState<string | null>(null);
@@ -126,6 +128,7 @@ export default function AIAnalysisTab({
               onClearSelection={handleClearSelection}
               conversationId={currentConversationId}
               onConversationChange={handleNewConversation}
+              selectedModel={selectedModel}
             />
           </CardContent>
         </Card>

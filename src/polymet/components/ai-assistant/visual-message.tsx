@@ -8,10 +8,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 interface VisualMessageProps {
   content: string;
   role: 'user' | 'assistant';
+  model?: string;
 }
 
-const VisualMessage: React.FC<VisualMessageProps> = ({ content, role }) => {
+const VisualMessage: React.FC<VisualMessageProps> = ({ content, role, model }) => {
   const isAI = role === 'assistant';
+  
+  const getModelDisplayName = (modelName?: string) => {
+    if (!modelName) return null;
+    switch (modelName) {
+      case 'claude-3-5-sonnet-20241022':
+        return 'Claude 3.5 Sonnet';
+      case 'gpt-4o':
+        return 'GPT-4o';
+      default:
+        return modelName;
+    }
+  };
   
   return (
     <div className={`flex gap-3 ${isAI ? 'justify-start' : 'justify-end'} mb-4`}>
@@ -25,11 +38,19 @@ const VisualMessage: React.FC<VisualMessageProps> = ({ content, role }) => {
       )}
       
       {/* Message content */}
-      <div className={`max-w-[85%] rounded-lg px-4 py-3 ${
-        isAI 
-          ? 'bg-white border border-gray-200 shadow-sm' 
-          : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-      }`}>
+      <div className={`max-w-[85%] ${isAI ? 'space-y-1' : ''}`}>
+        {/* Model badge for AI messages */}
+        {isAI && model && (
+          <div className="text-xs text-gray-500 font-medium mb-1">
+            {getModelDisplayName(model)}
+          </div>
+        )}
+        
+        <div className={`rounded-lg px-4 py-3 ${
+          isAI 
+            ? 'bg-white border border-gray-200 shadow-sm' 
+            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+        }`}>
         {isAI ? (
           <ReactMarkdown
             components={{
@@ -137,6 +158,7 @@ const VisualMessage: React.FC<VisualMessageProps> = ({ content, role }) => {
             {content}
           </div>
         )}
+        </div>
       </div>
       
       {/* Avatar for user messages (right side) */}
