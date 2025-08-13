@@ -25,10 +25,10 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   // Función para verificar el estado del modelo
   const checkModelStatus = async (modelUrn: string): Promise<boolean> => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
+      const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
       console.log('Checking model status for URN:', modelUrn);
       
-      const response = await fetch(`${apiBaseUrl}/api/forge/translate/${modelUrn}`);
+      const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/translate/${modelUrn}`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -53,11 +53,11 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   // Función para procesar el modelo
   const processModel = async (modelUrn: string): Promise<boolean> => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
+      const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
       console.log('Processing model for URN:', modelUrn);
       setStatus('Processing model...');
       
-      const response = await fetch(`${apiBaseUrl}/api/forge/translate`, {
+      const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/translate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,8 +90,8 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
     
     while (attempts < maxAttempts) {
       try {
-        const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiBaseUrl}/api/forge/translate/${modelUrn}`);
+        const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
+        const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/translate/${modelUrn}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -135,10 +135,10 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   // Función para obtener el access token
   const getAccessToken = async (callback: (token: string, expires: number) => void) => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
-      console.log('Requesting access token from:', apiBaseUrl);
+      const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
+      console.log('Requesting access token from:', aosApiBaseUrl);
       
-      const response = await fetch(`${apiBaseUrl}/api/forge/token`);
+      const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -264,9 +264,9 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
       }
 
       // Obtener el token primero
-      const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
+      const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
       
-      fetch(`${apiBaseUrl}/api/forge/token`)
+      fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`)
         .then(response => response.json())
         .then(data => {
           const accessToken = data.access_token;

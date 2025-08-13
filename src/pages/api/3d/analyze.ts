@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-const ANALYSIS_API_URL = "https://api-3d.autana.ai/api/analyze";
+// Use centralized AOS API instead of standalone service
+const AOS_API_BASE_URL = process.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
+const ANALYSIS_API_URL = `${AOS_API_BASE_URL}/api/v1/autodesk/process`;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -14,9 +16,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'fileUrl is required' });
     }
 
-    // Prepare the request payload matching your Python code exactly
+    // Prepare the request payload for centralized AOS API
     const payload = {
-      s3_url: fileUrl
+      file_url: fileUrl
     };
 
     const headers = {

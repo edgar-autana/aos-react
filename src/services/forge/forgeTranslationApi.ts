@@ -13,8 +13,8 @@ export interface TranslationResponse {
   error?: string;
 }
 
-// Get the 3D API base URL from environment variables
-const API_3D_BASE_URL = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
+// Get the AOS API base URL from environment variables (now centralized)
+const AOS_API_BASE_URL = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
 
 export const forgeTranslationApi = {
   // Translate STEP file to SVF format
@@ -22,7 +22,7 @@ export const forgeTranslationApi = {
     try {
       console.log('Starting translation for URN:', urn);
       
-      const response = await fetch(`${API_3D_BASE_URL}/api/forge/translate`, {
+      const response = await fetch(`${AOS_API_BASE_URL}/api/v1/autodesk/forge/translate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export const forgeTranslationApi = {
   // Check translation status
   async getTranslationStatus(jobId: string): Promise<TranslationJob> {
     try {
-      const response = await fetch(`${API_3D_BASE_URL}/api/forge/translate/${jobId}`);
+      const response = await fetch(`${AOS_API_BASE_URL}/api/v1/autodesk/forge/translate/${jobId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
