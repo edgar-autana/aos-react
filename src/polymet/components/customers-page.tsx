@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { SearchIcon, PlusIcon, Building2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SummaryCard } from "@/components/ui/summary-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -87,44 +88,26 @@ export default function CustomersPage() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{companies.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {companies.filter((c) => c.enabled).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {companies.filter((c) => !c.enabled).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">With NDA Signed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {companies.filter((c) => c.nda_signed).length}
-            </div>
-          </CardContent>
-        </Card>
+        <SummaryCard 
+          title="Total Customers"
+          value={companies.length}
+          icon={<Building2Icon className="h-4 w-4" />}
+        />
+        <SummaryCard 
+          title="Active Customers"
+          value={companies.filter((c) => c.enabled).length}
+          icon={<Building2Icon className="h-4 w-4" />}
+        />
+        <SummaryCard 
+          title="Inactive Customers"
+          value={companies.filter((c) => !c.enabled).length}
+          icon={<Building2Icon className="h-4 w-4" />}
+        />
+        <SummaryCard 
+          title="With NDA Signed"
+          value={companies.filter((c) => c.nda_signed).length}
+          icon={<Building2Icon className="h-4 w-4" />}
+        />
       </div>
 
       {/* Search Controls */}

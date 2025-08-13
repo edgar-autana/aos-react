@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SummaryCard } from "@/components/ui/summary-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +31,6 @@ import { formatUrl } from "@/utils/urlUtils";
 import { PageLoading } from "@/components/ui/loading";
 import { s3Service, validateImageFile, validatePresentationFile } from "@/lib/s3";
 import CustomerDetailsTab from "./customer-details-tab";
-import CustomerStatsTab from "./customer-stats-tab";
 import CustomerRfqsTab from "./customer-rfqs-tab";
 import CustomerPartNumbersTab from "./customer-part-numbers-tab";
 import CustomerGlobalQuotationsTab from "./customer-global-quotations-tab";
@@ -46,6 +46,7 @@ export default function CustomerProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState("rfqs");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch customer data by ID
@@ -412,29 +413,59 @@ export default function CustomerProfilePage() {
         </div>
       </div>
 
-      {/* Customer content */}
-      <Tabs defaultValue="details" className="mt-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
-          <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
-          <TabsTrigger value="rfqs" className="flex-1">RFQs</TabsTrigger>
-          <TabsTrigger value="part-numbers" className="flex-1">PNs</TabsTrigger>
-          <TabsTrigger value="global-quotations" className="flex-1">Global Quotations</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="details" className="space-y-6 mt-6">
-          <CustomerDetailsTab
-            customer={customer}
-            onFormSubmit={handleFormSubmit}
-            onPresentationUpload={handlePresentationUpload}
-            onPresentationRemove={handleRemovePresentation}
-            isLoading={saveLoading}
+      {/* Summary Cards */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <div onClick={() => setActiveTab("rfqs")} className="cursor-pointer">
+          <SummaryCard 
+            title="RFQs"
+            value={29}
+            isActive={activeTab === "rfqs"}
+            icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>}
           />
-        </TabsContent>
+        </div>
+        <div onClick={() => setActiveTab("part-numbers")} className="cursor-pointer">
+          <SummaryCard 
+            title="Part Numbers"
+            value={157}
+            isActive={activeTab === "part-numbers"}
+            icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 713 12V7a4 4 0 014-4z" />
+            </svg>}
+          />
+        </div>
+        <SummaryCard 
+          title="Quotes Sent"
+          value={87}
+          icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>}
+        />
+        <SummaryCard 
+          title="Purchase Orders"
+          value={0}
+          icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>}
+        />
+        <SummaryCard 
+          title="Quoted Value"
+          value="$2M"
+          icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>}
+        />
+      </div>
 
-        <TabsContent value="stats" className="space-y-6 mt-6">
-          <CustomerStatsTab customerId={customerId!} />
-        </TabsContent>
+      {/* Customer content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="rfqs" className="flex-1">RFQs</TabsTrigger>
+          <TabsTrigger value="part-numbers" className="flex-1">Part Numbers</TabsTrigger>
+          <TabsTrigger value="global-quotations" className="flex-1">Global Quotations</TabsTrigger>
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="rfqs" className="space-y-6 mt-6">
           <CustomerRfqsTab customerId={customerId!} />
@@ -446,6 +477,16 @@ export default function CustomerProfilePage() {
 
         <TabsContent value="global-quotations" className="space-y-6 mt-6">
           <CustomerGlobalQuotationsTab customerId={customerId!} />
+        </TabsContent>
+
+        <TabsContent value="details" className="space-y-6 mt-6">
+          <CustomerDetailsTab
+            customer={customer}
+            onFormSubmit={handleFormSubmit}
+            onPresentationUpload={handlePresentationUpload}
+            onPresentationRemove={handleRemovePresentation}
+            isLoading={saveLoading}
+          />
         </TabsContent>
       </Tabs>
 
