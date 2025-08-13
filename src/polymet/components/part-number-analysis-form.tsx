@@ -223,10 +223,42 @@ export default function PartNumberAnalysisForm() {
       // If it's a 3D file, automatically convert to URN
       if (fieldName === 'part_drawing_3d' && uploadResult.url) {
         console.log('3D file uploaded, automatically converting to URN...');
-        // Small delay to ensure the file is available and refetch completes
-        setTimeout(() => {
-          handleConvertToUrn(false); // Don't show toast for automatic conversion
-        }, 1500);
+        console.log('Upload result URL:', uploadResult.url);
+        console.log('Upload result details:', uploadResult);
+        
+        // Wait for database update to complete and add delay for S3 consistency
+        setTimeout(async () => {
+          // Verify the file is accessible before conversion
+          if (uploadResult.url) {
+            try {
+              console.log('Verifying file availability before conversion...');
+              const headResponse = await fetch(uploadResult.url, { method: 'HEAD' });
+              if (headResponse.ok) {
+                console.log('File is accessible, proceeding with conversion using the new URL');
+                // Use the newly uploaded URL directly instead of relying on database state
+                handleConvertToUrnWithUrl(uploadResult.url, false);
+              } else {
+                console.warn('File not yet accessible, retrying in 2 seconds...');
+                setTimeout(() => {
+                  if (uploadResult.url) {
+                    handleConvertToUrnWithUrl(uploadResult.url, false);
+                  }
+                }, 2000);
+              }
+            } catch (error) {
+              console.warn('Error verifying file accessibility:', error);
+              // Proceed anyway after additional delay
+              setTimeout(() => {
+                if (uploadResult.url) {
+                  handleConvertToUrnWithUrl(uploadResult.url, false);
+                }
+              }, 3000);
+            }
+          } else {
+            console.warn('No upload URL available, proceeding with conversion anyway');
+            handleConvertToUrn(false);
+          }
+        }, 2000); // Increased delay to ensure S3 consistency
       }
 
       // Refetch the part number data
@@ -317,25 +349,27 @@ export default function PartNumberAnalysisForm() {
     }
   };
 
-  const handleConvertToUrn = async (showToast = true) => {
-    if (!partNumber?.part_drawing_3d) {
-      if (showToast) {
-        toast({
-          title: "No 3D Model",
-          description: "Please upload a 3D model (STEP file) first.",
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-
+  const handleConvertToUrnWithUrl = async (fileUrl: string, showToast = true) => {
+    if (!partNumber) return;
+    
     setConvertingToUrn(true);
     setFormError(null);
 
     try {
-      console.log('Converting STEP file to URN:', partNumber.part_drawing_3d);
+      console.log('🚀 ==========================================');
+      console.log('🚀 STARTING STEP TO URN CONVERSION WITH SPECIFIC URL');
+      console.log('🚀 Part Number ID:', partNumber.id);
+      console.log('🚀 Using file URL:', fileUrl);
+      console.log('🚀 Timestamp:', new Date().toISOString());
       
-      const conversionResult = await stepConverterApi.convertStepToUrn(partNumber.part_drawing_3d);
+      // Parse URL to get more details
+      const url = new URL(fileUrl);
+      console.log('🚀 URL host:', url.host);
+      console.log('🚀 URL pathname:', url.pathname);
+      console.log('🚀 URL filename:', url.pathname.split('/').pop());
+      console.log('🚀 ==========================================');
+      
+      const conversionResult = await stepConverterApi.convertStepToUrn(fileUrl);
 
       if (!conversionResult.success || !conversionResult.urn) {
         throw new Error(conversionResult.error || 'Failed to convert STEP to URN');
@@ -363,7 +397,7 @@ export default function PartNumberAnalysisForm() {
       refetch();
       
     } catch (error) {
-      console.error('Error converting STEP to URN:', error);
+      console.error('❌ Error converting STEP to URN:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to convert STEP to URN';
       setFormError(errorMessage);
       
@@ -377,6 +411,22 @@ export default function PartNumberAnalysisForm() {
     } finally {
       setConvertingToUrn(false);
     }
+  };
+
+  const handleConvertToUrn = async (showToast = true) => {
+    if (!partNumber?.part_drawing_3d) {
+      if (showToast) {
+        toast({
+          title: "No 3D Model",
+          description: "Please upload a 3D model (STEP file) first.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // Use the specific URL version
+    return handleConvertToUrnWithUrl(partNumber.part_drawing_3d, showToast);
   };
 
   const handleOpen3DViewer = () => {

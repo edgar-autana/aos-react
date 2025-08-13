@@ -32,7 +32,8 @@ export interface ThreeDAnalysisResponse {
 }
 
 export class ThreeDAnalysisService {
-  private static readonly API_URL = 'https://api-3d.autana.ai/api/analyze';
+  private static readonly AOS_API_BASE_URL = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
+  private static readonly API_URL = `${this.AOS_API_BASE_URL}/api/v1/autodesk/process`;
 
   static async analyzeModel(
     fileUrl: string, 
@@ -41,9 +42,9 @@ export class ThreeDAnalysisService {
     includeCosting: boolean = true
   ): Promise<ThreeDAnalysisResponse> {
     try {
-      // Prepare the request payload matching the Python code exactly
+      // Prepare the request payload for the centralized AOS API
       const payload = {
-        s3_url: fileUrl
+        file_url: fileUrl
       };
 
       const headers = {

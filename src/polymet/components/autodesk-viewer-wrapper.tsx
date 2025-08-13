@@ -127,10 +127,10 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
 
     const getAccessToken = async (callback: (token: string, expires: number) => void) => {
       try {
-        const apiBaseUrl = import.meta.env.VITE_API_3D_BASE_URL || 'http://localhost:3001';
-        console.log('Requesting access token from:', apiBaseUrl);
+        const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
+        console.log('Requesting access token from:', aosApiBaseUrl);
         
-        const response = await fetch(`${apiBaseUrl}/api/forge/token`);
+        const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);

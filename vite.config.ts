@@ -21,9 +21,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/3d/analyze': {
-        target: 'https://api-3d.autana.ai',
+        target: process.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/3d\/analyze/, '/api/analyze'),
+        rewrite: (path) => path.replace(/^\/api\/3d\/analyze/, '/api/v1/autodesk/process'),
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
             console.log('proxy error', err);

@@ -22,8 +22,8 @@ The 3D analysis system provides automated analysis of 3D CAD models using:
   - Error handling and validation
 
 #### 2. 3D Analysis (`/api/3d/analyze`)
-- **Purpose**: Analyze 3D models using Autana AI API
-- **Configuration**: Uses `https://api-3d.autana.ai/api/analyze`
+- **Purpose**: Analyze 3D models using centralized AOS API
+- **Configuration**: Uses centralized AOS API `/api/v1/autodesk/process`
 - **Features**:
   - 5-minute timeout for analysis requests
   - Exact payload structure matching Python code
