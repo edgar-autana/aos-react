@@ -146,35 +146,86 @@ export default function PDFViewerWithSelection({
     if (region) {
       const regionWithPage = { ...region, page: currentPage };
       onRegionSelect(regionWithPage);
+      
+      // Auto-capture the region when selected
+      setTimeout(() => {
+        handleSnapshotClick(regionWithPage);
+      }, 100); // Small delay to ensure region is set
     } else {
       onRegionSelect(null);
     }
     setIsSelecting(false);
   }, [currentPage, onRegionSelect]);
 
-  const handleSnapshotClick = useCallback(() => {
-    if (!selectedRegion || !pageRef.current) return;
+  const handleSnapshotClick = useCallback((regionToCapture?: SelectedRegion) => {
+    const regionData = regionToCapture || selectedRegion;
+    if (!regionData || !pageRef.current) return;
+
+    console.log('Capturing region:', regionData);
+
+    // Find the PDF canvas element
+    const pdfCanvas = pageRef.current.querySelector('canvas') as HTMLCanvasElement;
+    if (!pdfCanvas) {
+      console.error('No PDF canvas found');
+      return;
+    }
+
+    // Get the actual rendered size of the canvas element
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+    console.log('Canvas DOM size:', canvasRect.width, 'x', canvasRect.height);
+    console.log('Canvas actual size:', pdfCanvas.width, 'x', pdfCanvas.height);
+
+    // Calculate scale factors to convert from DOM coordinates to canvas coordinates
+    const scaleX = pdfCanvas.width / canvasRect.width;
+    const scaleY = pdfCanvas.height / canvasRect.height;
+
+    console.log('Scale factors:', { scaleX, scaleY });
+
+    // Convert region coordinates from DOM space to canvas space
+    const canvasX = regionData.x * scaleX;
+    const canvasY = regionData.y * scaleY;
+    const canvasWidth = regionData.width * scaleX;
+    const canvasHeight = regionData.height * scaleY;
+
+    console.log('Region in DOM coordinates:', regionData);
+    console.log('Region in canvas coordinates:', { canvasX, canvasY, canvasWidth, canvasHeight });
 
     // Create a canvas to capture the selected region
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Find the PDF canvas element
-    const pdfCanvas = pageRef.current.querySelector('canvas');
-    if (!pdfCanvas) return;
+    // Set canvas dimensions to match the region (in canvas coordinates)
+    canvas.width = Math.round(canvasWidth);
+    canvas.height = Math.round(canvasHeight);
 
-    const { x, y, width, height } = selectedRegion;
-    canvas.width = width;
-    canvas.height = height;
+    // Ensure we're not trying to capture outside the PDF canvas bounds
+    const clampedX = Math.max(0, Math.min(Math.round(canvasX), pdfCanvas.width - 1));
+    const clampedY = Math.max(0, Math.min(Math.round(canvasY), pdfCanvas.height - 1));
+    const clampedWidth = Math.min(Math.round(canvasWidth), pdfCanvas.width - clampedX);
+    const clampedHeight = Math.min(Math.round(canvasHeight), pdfCanvas.height - clampedY);
 
-    // Draw the selected region
-    ctx.drawImage(pdfCanvas, x, y, width, height, 0, 0, width, height);
-    
-    // Convert to base64
-    const imageData = canvas.toDataURL('image/png');
-    onSnapshotCapture(imageData);
+    console.log('Clamped region:', { clampedX, clampedY, clampedWidth, clampedHeight });
+
+    // Draw the selected region from the PDF canvas to our new canvas
+    try {
+      ctx.drawImage(
+        pdfCanvas,           // source
+        clampedX, clampedY,  // source x, y
+        clampedWidth, clampedHeight,  // source width, height
+        0, 0,                // destination x, y
+        clampedWidth, clampedHeight   // destination width, height
+      );
+      
+      // Convert to base64
+      const imageData = canvas.toDataURL('image/png');
+      console.log('Generated image data length:', imageData.length);
+      onSnapshotCapture(imageData);
+    } catch (error) {
+      console.error('Error capturing region:', error);
+    }
   }, [selectedRegion, onSnapshotCapture]);
+
 
   // Clear selection when page changes
   useEffect(() => {
@@ -264,11 +315,11 @@ export default function PDFViewerWithSelection({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSnapshotClick}
+              onClick={() => handleSnapshotClick()}
               className="gap-2"
             >
               <CameraIcon className="h-4 w-4" />
-              Capture
+              Re-capture
             </Button>
           )}
           <Button

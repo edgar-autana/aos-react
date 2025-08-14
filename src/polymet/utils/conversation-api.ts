@@ -18,7 +18,7 @@ export interface Message {
   processing_time_ms?: number;
   confidence_score?: number;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Conversation {
@@ -34,7 +34,7 @@ export interface Conversation {
   total_cost: number;
   created_at: string;
   updated_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   messages?: Message[];
 }
 
@@ -168,7 +168,7 @@ export class ConversationAPI {
       role: 'user' | 'assistant';
       content: string;
       model?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<AddMessageResponse> {
     const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages`, {

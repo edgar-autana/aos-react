@@ -22,7 +22,24 @@ export interface ConversationServiceInterface {
     role: 'user' | 'assistant';
     content: string;
     model?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
+  }): Promise<AddMessageResponse>;
+  
+  addMessageWithRegion(conversationId: string, messageData: {
+    role: 'user' | 'assistant';
+    content: string;
+    model?: string;
+    regionData?: {
+      coordinates: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        page: number;
+      };
+      imageData: string;
+    };
+    metadata?: Record<string, unknown>;
   }): Promise<AddMessageResponse>;
 }
 
@@ -74,13 +91,53 @@ export class ConversationService implements ConversationServiceInterface {
       role: 'user' | 'assistant';
       content: string;
       model?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<AddMessageResponse> {
     try {
       return await ConversationAPI.addMessage(conversationId, messageData);
     } catch (error) {
       console.error('ConversationService: Failed to add message:', error);
+      throw error;
+    }
+  }
+
+  async addMessageWithRegion(
+    conversationId: string, 
+    messageData: {
+      role: 'user' | 'assistant';
+      content: string;
+      model?: string;
+      regionData?: {
+        coordinates: {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          page: number;
+        };
+        imageData: string;
+      };
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<AddMessageResponse> {
+    try {
+      // Prepare enhanced metadata with region information
+      const enhancedMetadata = {
+        ...messageData.metadata,
+        hasRegionData: !!messageData.regionData,
+        regionCoordinates: messageData.regionData?.coordinates,
+        regionImageData: messageData.regionData?.imageData
+      };
+
+      return await ConversationAPI.addMessage(conversationId, {
+        role: messageData.role,
+        content: messageData.content,
+        model: messageData.model,
+        metadata: enhancedMetadata
+      });
+    } catch (error) {
+      console.error('ConversationService: Failed to add message with region:', error);
       throw error;
     }
   }

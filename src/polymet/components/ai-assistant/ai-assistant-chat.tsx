@@ -103,6 +103,33 @@ export default function AIAssistantChat({
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim()) return;
 
+    // Check if region is required but not available
+    if (selectedRegion && !regionSnapshot) {
+      setError('Please capture the region before sending the message');
+      return;
+    }
+
+    // Prepare metadata with region information for the user message
+    const messageMetadata: Record<string, any> = { 
+      timestamp: new Date().toISOString(),
+      hasSelectedRegion: !!selectedRegion,
+      regionSnapshot: !!regionSnapshot
+    };
+
+    // If there's a region selected and captured, include it in the metadata
+    if (selectedRegion && regionSnapshot) {
+      messageMetadata.selectedRegion = {
+        coordinates: {
+          x: selectedRegion.x,
+          y: selectedRegion.y,
+          width: selectedRegion.width,
+          height: selectedRegion.height,
+          page: selectedRegion.page
+        },
+        imageData: regionSnapshot
+      };
+    }
+
     const userMessage: Message = {
       id: `temp-${Date.now()}`,
       conversation_id: conversation?.id || '',
@@ -110,7 +137,8 @@ export default function AIAssistantChat({
       content: messageContent,
       message_order: messages.length + 1,
       model: selectedModel,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      metadata: messageMetadata
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -120,31 +148,61 @@ export default function AIAssistantChat({
 
     try {
       let response;
-      
+
       if (conversation?.id) {
         // Continue existing conversation
-        response = await conversationService.addMessage(conversation.id, {
-          role: 'user',
-          content: messageContent,
-          model: selectedModel,
-          metadata: { 
-            timestamp: new Date().toISOString(),
-            hasSelectedRegion: !!selectedRegion,
-            regionSnapshot: !!regionSnapshot
-          }
-        });
+        if (selectedRegion && regionSnapshot) {
+          // Use the new method for region-based messages
+          response = await conversationService.addMessageWithRegion(conversation.id, {
+            role: 'user',
+            content: messageContent,
+            model: selectedModel,
+            regionData: {
+              coordinates: {
+                x: selectedRegion.x,
+                y: selectedRegion.y,
+                width: selectedRegion.width,
+                height: selectedRegion.height,
+                page: selectedRegion.page
+              },
+              imageData: regionSnapshot
+            },
+            metadata: messageMetadata
+          });
+        } else {
+          // Use regular message method
+          response = await conversationService.addMessage(conversation.id, {
+            role: 'user',
+            content: messageContent,
+            model: selectedModel,
+            metadata: messageMetadata
+          });
+        }
       } else {
-        // Create new conversation
+        // For new conversations, we need to handle region data differently
+        // since createConversation doesn't support metadata directly
         response = await conversationService.createConversation({
           part_number_id: partNumber.id,
-          document_url: partNumber.part_drawing_2d || '',
+          document_url: selectedRegion && regionSnapshot ? 'region_selected' : (partNumber.part_drawing_2d || ''),
           title: `Analysis - ${partNumber.part_name || partNumber.drawing_number || `Part ${partNumber.id}`}`,
           initial_message: messageContent,
           is_active_document: true
         });
+
+        // If we created a conversation with region data, we need to add the metadata
+        // in a follow-up message update (this would need backend support)
+        if (response.success && selectedRegion && regionSnapshot) {
+          // For now, we'll handle this in the conversation creation
+          // The backend should be updated to handle region data in initial messages
+        }
       }
 
       if (response.success) {
+        // Clear region selection after successful message send
+        if (selectedRegion) {
+          onClearSelection();
+        }
+        
         if (!conversation?.id) {
           // New conversation created
           if ('conversation' in response && response.conversation) {
@@ -188,6 +246,13 @@ export default function AIAssistantChat({
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
+    
+    // Don't allow sending if region is selected but not captured
+    if (selectedRegion && !regionSnapshot) {
+      setError('Please capture the region before sending the message');
+      return;
+    }
+    
     sendMessage(inputValue.trim());
   };
 
@@ -330,6 +395,7 @@ export default function AIAssistantChat({
                   content={message.content}
                   role={message.role}
                   model={message.model || message.model_used}
+                  metadata={message.metadata}
                 />
                 <div className={`text-xs px-3 ${
                   message.role === 'user' ? 'text-right text-blue-600' : 'text-left text-gray-500 ml-11'
@@ -348,6 +414,65 @@ export default function AIAssistantChat({
 
       {/* Input area */}
       <div className="flex-shrink-0 p-4 border-t-2 bg-white shadow-sm">
+        {/* Region status indicator */}
+        {selectedRegion && (
+          <div className={`mb-3 p-3 rounded-lg border text-sm ${
+            regionSnapshot 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+          }`}>
+            <div className="flex items-center gap-3">
+              {regionSnapshot ? (
+                <div className="flex items-center gap-3">
+                  {/* Thumbnail of captured region */}
+                  <div className="flex-shrink-0 relative">
+                    <img 
+                      src={regionSnapshot.startsWith('data:') ? regionSnapshot : `data:image/png;base64,${regionSnapshot}`} 
+                      alt="Captured region" 
+                      className="w-12 h-12 object-cover rounded border border-green-300 shadow-sm"
+                      onError={(e) => {
+                        console.error('Failed to load region thumbnail:', e);
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        // Show fallback icon
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                    {/* Fallback icon - only shows if image fails to load */}
+                    <div 
+                      className="w-12 h-12 bg-green-100 border border-green-300 rounded flex items-center justify-center shadow-sm"
+                      style={{ display: 'none' }}
+                    >
+                      <ImageIcon className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">✅ Region captured - ready to analyze</span>
+                    </div>
+                    <span className="text-xs text-green-600 mt-1">
+                      {selectedRegion.width}×{selectedRegion.height}px at ({selectedRegion.x}, {selectedRegion.y})
+                    </span>
+                  </div>
+                  <button
+                    onClick={onClearSelection}
+                    className="ml-auto p-1 hover:bg-green-100 rounded transition-colors"
+                    title="Clear region selection"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  <span>⚠️ Region selected - click "Capture" to proceed</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Input
             value={inputValue}
@@ -355,15 +480,21 @@ export default function AIAssistantChat({
             onKeyPress={handleKeyPress}
             placeholder={
               selectedRegion 
-                ? "Ask about the selected region..." 
+                ? (regionSnapshot ? "Ask about the selected region..." : "Capture the region first...") 
                 : "Ask about the technical drawing..."
             }
             className="flex-1 border-2 focus:border-blue-500"
-            disabled={isTyping || externalLoading || internalLoading}
+            disabled={isTyping || externalLoading || internalLoading || (selectedRegion && !regionSnapshot)}
           />
           <Button 
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isTyping || externalLoading || internalLoading}
+            disabled={
+              !inputValue.trim() || 
+              isTyping || 
+              externalLoading || 
+              internalLoading || 
+              (selectedRegion && !regionSnapshot)
+            }
             size="sm"
             className="bg-blue-600 hover:bg-blue-700"
           >

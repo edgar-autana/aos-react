@@ -2,17 +2,35 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { BotIcon, UserIcon } from 'lucide-react';
+import { BotIcon, UserIcon, ImageIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface VisualMessageProps {
   content: string;
   role: 'user' | 'assistant';
   model?: string;
+  metadata?: Record<string, unknown>;
 }
 
-const VisualMessage: React.FC<VisualMessageProps> = ({ content, role, model }) => {
+const VisualMessage: React.FC<VisualMessageProps> = ({ content, role, model, metadata }) => {
   const isAI = role === 'assistant';
+  
+  // Check if this message has region data
+  const hasRegionData = metadata?.selectedRegion && 
+    typeof metadata.selectedRegion === 'object' && 
+    metadata.selectedRegion !== null &&
+    'imageData' in metadata.selectedRegion;
+  
+  const regionData = hasRegionData ? metadata.selectedRegion as {
+    coordinates: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      page: number;
+    };
+    imageData: string;
+  } : null;
   
   const getModelDisplayName = (modelName?: string) => {
     if (!modelName) return null;
@@ -43,6 +61,40 @@ const VisualMessage: React.FC<VisualMessageProps> = ({ content, role, model }) =
         {isAI && model && (
           <div className="text-xs text-gray-500 font-medium mb-1">
             {getModelDisplayName(model)}
+          </div>
+        )}
+        
+        {/* Region indicator for user messages */}
+        {!isAI && regionData && (
+          <div className="flex items-center gap-2 mb-2 p-2 bg-blue-100 rounded-lg border border-blue-200">
+            <div className="flex-shrink-0 relative">
+              <img 
+                src={regionData.imageData.startsWith('data:') ? regionData.imageData : `data:image/png;base64,${regionData.imageData}`} 
+                alt="Selected region" 
+                className="w-8 h-8 object-cover rounded border border-blue-300 shadow-sm"
+                onError={(e) => {
+                  console.error('Failed to load region thumbnail in message:', e);
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  // Show fallback icon
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              {/* Fallback icon */}
+              <div 
+                className="w-8 h-8 bg-blue-200 border border-blue-300 rounded flex items-center justify-center shadow-sm"
+                style={{ display: 'none' }}
+              >
+                <ImageIcon className="h-4 w-4 text-blue-600" />
+              </div>
+            </div>
+            <div className="text-xs text-blue-700">
+              <div className="font-medium">Region Analysis</div>
+              <div className="text-blue-600">
+                {regionData.coordinates.width}×{regionData.coordinates.height}px
+              </div>
+            </div>
           </div>
         )}
         
