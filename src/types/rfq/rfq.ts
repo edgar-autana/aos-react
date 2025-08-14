@@ -2,9 +2,10 @@
 export interface RFQ {
   id: string
   created_at: string
-  id_atos: string | null
+  id_atos: string | null // LEGACY - DO NOT USE IN QUERIES
   slug: number | null
-  company_atos: string | null
+  company: string | null // References tb_company.id - USE THIS
+  company_atos: string | null // LEGACY - DO NOT USE IN QUERIES
   name: string | null
   description: string | null
   assigned: string | null

@@ -22,7 +22,13 @@ export const partNumberApi = {
 
       // Apply filters
       if (filters?.company_atos) {
-        query = query.eq('company_atos', filters.company_atos);
+        query = query.eq('company', filters.company_atos);
+      }
+      if (filters?.company) {
+        query = query.eq('company', filters.company);
+      }
+      if (filters?.company_id) {
+        query = query.eq('company', filters.company_id);
       }
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -44,13 +50,11 @@ export const partNumberApi = {
         .order('created_at_atos', { ascending: false });
 
       if (error) {
-        console.error('Error fetching part numbers:', error);
         return { data: null, error: error.message };
       }
 
       return { data: data || [], error: null };
     } catch (err) {
-      console.error('Exception in getAll:', err);
       return { data: null, error: 'Failed to fetch part numbers' };
     }
   },
@@ -65,13 +69,11 @@ export const partNumberApi = {
         .order('created_at_atos', { ascending: false });
 
       if (error) {
-        console.error('Error fetching part numbers by RFQ:', error);
         return { data: null, error: error.message };
       }
 
       return { data: data || [], error: null };
     } catch (err) {
-      console.error('Exception in getByRfqId:', err);
       return { data: null, error: 'Failed to fetch part numbers' };
     }
   },
@@ -92,6 +94,15 @@ export const partNumberApi = {
         .eq('rfq', rfqId);
 
       // Apply additional filters
+      if (filters?.company_atos) {
+        query = query.eq('company', filters.company_atos);
+      }
+      if (filters?.company) {
+        query = query.eq('company', filters.company);
+      }
+      if (filters?.company_id) {
+        query = query.eq('company', filters.company_id);
+      }
       if (filters?.status) {
         query = query.eq('status', filters.status);
       }
@@ -113,34 +124,46 @@ export const partNumberApi = {
         .range(offset, offset + pageSize - 1);
 
       if (error) {
-        console.error('Error fetching paginated part numbers:', error);
         return { data: [], count: 0, error: error.message };
       }
 
       return { data: data || [], count: count || 0, error: null };
     } catch (err) {
-      console.error('Exception in getByRfqIdPaginated:', err);
       return { data: [], count: 0, error: 'Failed to fetch part numbers' };
     }
   },
 
-  // Get part numbers by company ID
+  // Get part numbers by company ID (via RFQ relationship)
   async getByCompanyId(companyId: string): Promise<ApiResponse<PartNumber[]>> {
     try {
+      // First get all RFQs for this company
+      const { data: rfqs, error: rfqError } = await supabase
+        .from('tb_rfq')
+        .select('id')
+        .eq('company', companyId);
+
+      if (rfqError) {
+        return { data: null, error: rfqError.message };
+      }
+
+      if (!rfqs || rfqs.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Get part numbers for all RFQs of this company
+      const rfqIds = rfqs.map(rfq => rfq.id);
       const { data, error } = await supabase
         .from('tb_part_number')
         .select('*')
-        .eq('company_atos', companyId)
+        .in('rfq', rfqIds)
         .order('created_at_atos', { ascending: false });
 
       if (error) {
-        console.error('Error fetching part numbers by company:', error);
         return { data: null, error: error.message };
       }
 
       return { data: data || [], error: null };
     } catch (err) {
-      console.error('Exception in getByCompanyId:', err);
       return { data: null, error: 'Failed to fetch part numbers' };
     }
   },
@@ -155,13 +178,11 @@ export const partNumberApi = {
         .single();
 
       if (error) {
-        console.error('Error fetching part number by ID:', error);
         return { data: null, error: error.message };
       }
 
       return { data, error: null };
     } catch (err) {
-      console.error('Exception in getById:', err);
       return { data: null, error: 'Failed to fetch part number' };
     }
   },
@@ -169,7 +190,6 @@ export const partNumberApi = {
   // Create new part number
   async create(partNumber: PartNumberPayload): Promise<ApiResponse<PartNumber>> {
     try {
-      console.log('Creating part number with payload:', partNumber);
       
       const { data, error } = await supabase
         .from('tb_part_number')
@@ -178,8 +198,6 @@ export const partNumberApi = {
         .single();
 
       if (error) {
-        console.error('Error creating part number:', error);
-        console.error('Full error object:', JSON.stringify(error, null, 2));
         
         // Enhanced error messages for specific issues
         let errorMessage = error.message || 'Failed to create part number';
@@ -197,7 +215,6 @@ export const partNumberApi = {
 
       return { data, error: null };
     } catch (err) {
-      console.error('Exception in create:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create part number';
       return { data: null, error: errorMessage };
     }
@@ -206,8 +223,6 @@ export const partNumberApi = {
   // Update part number
   async update(id: string, partNumber: Partial<PartNumberPayload>): Promise<ApiResponse<PartNumber>> {
     try {
-      console.log('Updating part number with ID:', id);
-      console.log('Update payload:', partNumber);
       
       const { data, error } = await supabase
         .from('tb_part_number')
@@ -217,15 +232,11 @@ export const partNumberApi = {
         .single();
 
       if (error) {
-        console.error('Error updating part number:', error);
-        console.error('Full error object:', JSON.stringify(error, null, 2));
         return { data: null, error: error.message };
       }
 
-      console.log('Update successful, returned data:', data);
       return { data, error: null };
     } catch (err) {
-      console.error('Exception in update:', err);
       return { data: null, error: 'Failed to update part number' };
     }
   },
@@ -239,13 +250,11 @@ export const partNumberApi = {
         .eq('id', id);
 
       if (error) {
-        console.error('Error deleting part number:', error);
         return { data: null, error: error.message };
       }
 
       return { data: true, error: null };
     } catch (err) {
-      console.error('Exception in delete:', err);
       return { data: null, error: 'Failed to delete part number' };
     }
   }

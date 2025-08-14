@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageLoading } from '@/components/ui/loading';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { 
   FileTextIcon, 
   PackageIcon, 
@@ -16,7 +16,8 @@ import {
   PlusIcon,
   Trash2Icon,
   EyeIcon,
-  FileImageIcon
+  FileImageIcon,
+  SearchIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { partNumberApi } from '@/services/part-number/partNumberApi';
@@ -27,6 +28,7 @@ import { PartNumber } from '@/types/part-number/partNumber';
 import { QuotationWithDetails } from '@/types/quotation/quotation';
 import { GlobalQuotationPayload } from '@/types/global-quotation/globalQuotation';
 import { RFQ } from '@/types/rfq/rfq';
+import { rfqApi } from '@/services/rfq/rfqApi';
 import { Link } from 'react-router-dom';
 
 interface CustomerPartNumbersTabProps {
@@ -47,75 +49,85 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
     hasAnySelections
   } = useGlobalQuoteSelection();
 
-  const [rfqs, setRfqs] = useState<RFQ[]>([]);
-  const [selectedRfqId, setSelectedRfqId] = useState<string>('');
   const [partNumbers, setPartNumbers] = useState<PartNumber[]>([]);
+  const [filteredPartNumbers, setFilteredPartNumbers] = useState<PartNumber[]>([]);
+  const [rfqsMap, setRfqsMap] = useState<Map<string, RFQ>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [rfqLoading, setRfqLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedPartNumber, setSelectedPartNumber] = useState<PartNumber | null>(null);
   const [quotations, setQuotations] = useState<QuotationWithDetails[]>([]);
   const [quotationLoading, setQuotationLoading] = useState(false);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [isCreateGlobalModalOpen, setIsCreateGlobalModalOpen] = useState(false);
-  const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
-  const [pendingRfqId, setPendingRfqId] = useState<string>('');
   const [globalQuoteName, setGlobalQuoteName] = useState('');
 
-  // Fetch RFQs for the customer
+  // Fetch part numbers for the customer
   React.useEffect(() => {
-    const fetchRfqs = async () => {
+    const fetchPartNumbers = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Import rfqApi to get RFQs by company
-        const { rfqApi } = await import('@/services/rfq/rfqApi');
-        const response = await rfqApi.getByCompanyId(customerId);
+        // Fetch part numbers and RFQs
+        const [partNumbersResponse, rfqsResponse] = await Promise.all([
+          partNumberApi.getByCompanyId(customerId),
+          rfqApi.getByCompanyId(customerId)
+        ]);
         
-        if (response.error) {
-          setError(response.error);
+        if (partNumbersResponse.error) {
+          setError(partNumbersResponse.error);
+        } else if (rfqsResponse.error) {
+          setError(rfqsResponse.error);
         } else {
-          setRfqs(response.data || []);
+          const partNumbers = partNumbersResponse.data || [];
+          const rfqs = rfqsResponse.data || [];
+          
+          // Create RFQs map for quick lookup
+          const rfqsMap = new Map<string, RFQ>();
+          rfqs.forEach(rfq => {
+            rfqsMap.set(rfq.id, rfq);
+          });
+          
+          setPartNumbers(partNumbers);
+          setFilteredPartNumbers(partNumbers);
+          setRfqsMap(rfqsMap);
         }
       } catch (err) {
-        setError('Failed to load RFQs');
+        setError('Failed to load part numbers');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRfqs();
+    fetchPartNumbers();
   }, [customerId]);
 
-  // Fetch part numbers when RFQ is selected
+  // Filter part numbers based on search term
   React.useEffect(() => {
-    const fetchPartNumbers = async () => {
-      if (!selectedRfqId) {
-        setPartNumbers([]);
-        return;
-      }
+    if (!searchTerm.trim()) {
+      setFilteredPartNumbers(partNumbers);
+      return;
+    }
 
-      setRfqLoading(true);
-      setError(null);
+    const filtered = partNumbers.filter(partNumber => {
+      const searchLower = searchTerm.toLowerCase();
       
-      try {
-        const response = await partNumberApi.getByRfqId(selectedRfqId);
-        
-        if (response.error) {
-          setError(response.error);
-        } else {
-          setPartNumbers(response.data || []);
-        }
-      } catch (err) {
-        setError('Failed to load part numbers for selected RFQ');
-      } finally {
-        setRfqLoading(false);
-      }
-    };
+      // Get RFQ name for this part number
+      const rfq = partNumber.rfq ? rfqsMap.get(partNumber.rfq) : null;
+      const rfqName = rfq?.name || rfq?.slug_name || '';
+      
+      return (
+        (partNumber.part_name?.toLowerCase().includes(searchLower)) ||
+        (partNumber.drawing_number?.toLowerCase().includes(searchLower)) ||
+        (partNumber.slug_name?.toLowerCase().includes(searchLower)) ||
+        (partNumber.name?.toLowerCase().includes(searchLower)) ||
+        (rfqName.toLowerCase().includes(searchLower))
+      );
+    });
 
-    fetchPartNumbers();
-  }, [selectedRfqId]);
+    setFilteredPartNumbers(filtered);
+  }, [searchTerm, partNumbers, rfqsMap]);
 
   // Fetch quotations for a part number
   const fetchQuotations = async (partNumberId: string) => {
@@ -149,22 +161,9 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
     setIsQuoteModalOpen(true);
   };
 
-  // Handle RFQ selection
-  const handleRfqSelection = (rfqId: string) => {
-    if (hasAnySelections() && getTotalSelectedQuotes() > 0) {
-      setPendingRfqId(rfqId);
-      setIsWarningModalOpen(true);
-      return;
-    }
-    setSelectedRfqId(rfqId);
-  };
-
-  // Handle warning modal accept
-  const handleWarningAccept = () => {
-    clearAllSelections();
-    setSelectedRfqId(pendingRfqId);
-    setPendingRfqId('');
-    setIsWarningModalOpen(false);
+  // Handle search input change
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
   };
 
   // Handle quote selection
@@ -242,6 +241,13 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
     return partNumber.part_name || partNumber.slug_name || `PN-${partNumber.id.slice(-6)}`;
   };
 
+  // Get RFQ name for a part number
+  const getRfqName = (partNumber: PartNumber): string => {
+    if (!partNumber.rfq) return '—';
+    const rfq = rfqsMap.get(partNumber.rfq);
+    return rfq?.name || rfq?.slug_name || `RFQ-${partNumber.rfq.slice(-6)}`;
+  };
+
   // Get part number status color
   const getPartNumberStatusColor = (status: string | null): string => {
     if (!status) return "bg-gray-100 text-gray-800";
@@ -288,9 +294,9 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Part Numbers</h3>
+          <h3 className="text-lg font-semibold">Part Numbers ({filteredPartNumbers.length})</h3>
           <p className="text-sm text-muted-foreground">
-            Select an RFQ to view and manage part numbers and their quotations
+            Browse and manage part numbers for this customer
           </p>
         </div>
         {hasAnySelections() && (
@@ -314,198 +320,114 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
         )}
       </div>
 
-      {/* RFQ Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select RFQ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedRfqId} onValueChange={handleRfqSelection}>
-            <SelectTrigger {...{} as any}>
-              <SelectValue placeholder="Choose an RFQ to view part numbers" />
-            </SelectTrigger>
-            <SelectContent {...{} as any}>
-              {rfqs.map((rfq) => (
-                <SelectItem key={rfq.id} value={rfq.id} {...{} as any}>
-                  {rfq.name || `RFQ-${rfq.id.slice(-6)}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total RFQs</CardTitle>
-            <FileTextIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rfqs.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Part Numbers</CardTitle>
-            <PackageIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{partNumbers.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Selected Quotes</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getTotalSelectedQuotes()}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Part Numbers with Selections</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.keys(quoteSelection).length}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Search */}
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1 max-w-sm">
+          <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by part name, number, or RFQ..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </div>
 
       {/* Part Numbers Table */}
-      {selectedRfqId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Part Numbers ({partNumbers.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {rfqLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Loading part numbers...</p>
-              </div>
-            ) : partNumbers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <PackageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-lg font-medium">No part numbers found</p>
-                <p className="text-sm">This RFQ doesn't have any part numbers yet.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-4 font-medium">Part Name</th>
-                      <th className="text-left p-4 font-medium">Part Number</th>
-                      <th className="text-left p-4 font-medium">Process</th>
-                      <th className="text-left p-4 font-medium">Status</th>
-                      <th className="text-left p-4 font-medium">Documents</th>
-                      <th className="text-left p-4 font-medium">EAU</th>
-                      <th className="text-left p-4 font-medium">Piece Price</th>
-                      <th className="text-left p-4 font-medium">Selection</th>
-                      <th className="text-left p-4 font-medium">Actions</th>
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Loading part numbers...</p>
+            </div>
+          ) : filteredPartNumbers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <PackageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-lg font-medium">
+                {searchTerm ? 'No part numbers found matching your search' : 'No part numbers found'}
+              </p>
+              <p className="text-sm">
+                {searchTerm ? 'Try adjusting your search terms.' : 'This customer doesn\'t have any part numbers yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-2 font-medium" style={{width: '25%'}}>Part Name</th>
+                    <th className="text-left p-2 font-medium" style={{width: '20%'}}>RFQ</th>
+                    <th className="text-left p-2 font-medium" style={{width: '15%'}}>Part Number</th>
+                    <th className="text-left p-2 font-medium" style={{width: '15%'}}>Process</th>
+                    <th className="text-left p-2 font-medium" style={{width: '8%'}}>2D</th>
+                    <th className="text-left p-2 font-medium" style={{width: '10%'}}>Selected</th>
+                    <th className="text-left p-2 font-medium" style={{width: '7%'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredPartNumbers.map((partNumber) => (
+                    <tr 
+                      key={partNumber.id} 
+                      className={`hover:bg-muted/50 cursor-pointer ${
+                        hasSelectedQuotes(partNumber.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
+                      }`}
+                      onClick={() => handlePartNumberClick(partNumber)}
+                    >
+                      <td className="p-2" style={{width: '25%'}}>
+                        <div className="font-medium text-xs leading-tight break-words">{getPartNumberDisplayName(partNumber)}</div>
+                      </td>
+                      <td className="p-2" style={{width: '20%'}}>
+                        <div className="font-medium text-xs leading-tight break-words">{getRfqName(partNumber)}</div>
+                      </td>
+                      <td className="p-2" style={{width: '15%'}}>
+                        <div className="text-xs font-mono leading-tight break-words">
+                          {partNumber.drawing_number || '—'}
+                        </div>
+                      </td>
+                      <td className="p-2" style={{width: '15%'}}>
+                        <Badge className="bg-blue-100 text-blue-800 text-xs">
+                          {partNumber.main_process || '—'}
+                        </Badge>
+                      </td>
+                      <td className="p-2" style={{width: '8%'}}>
+                        <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
+                          {partNumber.part_drawing_2d ? (
+                            <a
+                              href={partNumber.part_drawing_2d}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 transition-colors"
+                            >
+                              <FileTextIcon className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2" style={{width: '10%'}}>
+                        <div className="flex items-center justify-center">
+                          <span className="text-sm font-medium">
+                            {getSelectedQuotesForPartNumber(partNumber.id).length}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-2" style={{width: '7%'}}>
+                        <Link to={`/part-number/${partNumber.id}`} onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <EyeIcon className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {partNumbers.map((partNumber) => (
-                      <tr 
-                        key={partNumber.id} 
-                        className={`hover:bg-muted/50 cursor-pointer ${
-                          hasSelectedQuotes(partNumber.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
-                        }`}
-                        onClick={() => handlePartNumberClick(partNumber)}
-                      >
-                        <td className="p-4">
-                          <div className="font-medium">{getPartNumberDisplayName(partNumber)}</div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm font-mono">
-                            {partNumber.drawing_number || '—'}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge className="bg-blue-100 text-blue-800">
-                            {partNumber.main_process || '—'}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={getPartNumberStatusColor(partNumber.status)}>
-                            {partNumber.status || 'Unknown'}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
-                            {partNumber.part_drawing_2d && (
-                              <a
-                                href={partNumber.part_drawing_2d}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition-colors"
-                              >
-                                <FileTextIcon className="h-3 w-3" />
-                                2D Drawing
-                              </a>
-                            )}
-                            {partNumber.part_drawing_3d && (
-                              <a
-                                href={partNumber.part_drawing_3d}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
-                              >
-                                <FileImageIcon className="h-3 w-3" />
-                                3D Model
-                              </a>
-                            )}
-                            {!partNumber.part_drawing_2d && !partNumber.part_drawing_3d && (
-                              <span className="text-sm text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">
-                            {formatNumber(partNumber.estimated_anual_units)}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">
-                            {formatNumber(partNumber.piece_price)}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            {hasSelectedQuotes(partNumber.id) && (
-                              <CheckCircleIcon className="h-4 w-4 text-green-600" />
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {getSelectedQuotesForPartNumber(partNumber.id).length} selected
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Link to={`/part-number/${partNumber.id}`} onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                              <EyeIcon className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quote Selection Modal */}
       <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
@@ -567,48 +489,6 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
         </DialogContent>
       </Dialog>
 
-      {/* Warning Modal for RFQ Change */}
-      <Dialog open={isWarningModalOpen} onOpenChange={setIsWarningModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-              Change RFQ
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              You have already selected quotes from another RFQ. Changing the RFQ will clear all your current selections.
-            </p>
-            
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                This action will remove {getTotalSelectedQuotes()} selected quotes from {Object.keys(quoteSelection).length} part numbers.
-              </AlertDescription>
-            </Alert>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsWarningModalOpen(false);
-                setPendingRfqId('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleWarningAccept}
-              variant="destructive"
-            >
-              Clear Selections & Change RFQ
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Create Global Quotation Modal */}
       <Dialog open={isCreateGlobalModalOpen} onOpenChange={setIsCreateGlobalModalOpen}>

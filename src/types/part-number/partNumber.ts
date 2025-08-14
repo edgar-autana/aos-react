@@ -1,9 +1,11 @@
 export interface PartNumber {
   id: string;
-  id_atos: string;
+  id_atos: string; // LEGACY - DO NOT USE IN QUERIES
   slug: number | null;
-  company_atos: string | null;
-  rfq: string | null; // UUID reference to tb_rfq
+  company: string | null; // References tb_company.id - USE THIS
+  company_atos: string | null; // LEGACY - DO NOT USE IN QUERIES
+  company_id: string | null; // Legacy compatibility
+  rfq: string | null; // UUID reference to tb_rfq.id
   name: string | null;
   part_name: string | null; // Part name field
   drawing_number: string | null; // Drawing number field
@@ -49,8 +51,9 @@ export interface PartNumber {
 
 export interface PartNumberPayload {
   slug?: number | null;
-  company_atos?: string | null;
-  company?: string | null;
+  company?: string | null; // References tb_company.id - USE THIS
+  company_atos?: string | null; // LEGACY - DO NOT USE
+  company_id?: string | null; // Legacy compatibility
   rfq?: string | null;
   name?: string | null;
   part_name?: string | null;
@@ -97,8 +100,9 @@ export interface PartNumberPayload {
 export interface PartNumberFilters {
   id?: string;
   rfq?: string;
-  company_atos?: string;
-  company?: string;
+  company?: string; // References tb_company.id - USE THIS
+  company_atos?: string; // LEGACY - DO NOT USE
+  company_id?: string; // Legacy compatibility
   status?: string;
   supplier?: number;
   enabled?: boolean;

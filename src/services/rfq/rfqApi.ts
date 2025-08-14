@@ -24,7 +24,6 @@ export const rfqApi = {
         loading: false
       }
     } catch (error) {
-      console.error('Exception in getAll:', error)
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -114,7 +113,7 @@ export const rfqApi = {
       const { data, error } = await supabase
         .from('tb_rfq')
         .select('*')
-        .or(`company.eq.${companyId},company_atos.eq.${companyId}`)
+        .eq('company', companyId)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -169,7 +168,6 @@ export const rfqApi = {
         loading: false
       }
     } catch (error) {
-      console.error('Exception in getAllWithCompany:', error)
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -191,7 +189,7 @@ export const rfqApi = {
       const { data, error, count } = await supabase
         .from('tb_rfq')
         .select('*', { count: 'exact' })
-        .or(`company.eq.${companyId},company_atos.eq.${companyId}`)
+        .eq('company', companyId)
         .order('created_at', { ascending: false })
         .range(from, to)
 

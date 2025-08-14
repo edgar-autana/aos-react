@@ -30,6 +30,9 @@ import {
 import { formatUrl } from "@/utils/urlUtils";
 import { PageLoading } from "@/components/ui/loading";
 import { s3Service, validateImageFile, validatePresentationFile } from "@/lib/s3";
+import { supabase } from "@/lib/supabase";
+import { partNumberApi } from "@/services/part-number/partNumberApi";
+import { rfqApi } from "@/services/rfq/rfqApi";
 import CustomerDetailsTab from "./customer-details-tab";
 import CustomerRfqsTab from "./customer-rfqs-tab";
 import CustomerPartNumbersTab from "./customer-part-numbers-tab";
@@ -47,6 +50,14 @@ export default function CustomerProfilePage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("rfqs");
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    rfqsCount: 0,
+    partNumbersCount: 0,
+    quotesSent: 0,
+    purchaseOrders: 0,
+    quotedValue: "$0"
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch customer data by ID
@@ -76,6 +87,41 @@ export default function CustomerProfilePage() {
     };
 
     fetchCustomer();
+  }, [customerId]);
+
+  // Fetch customer statistics
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!customerId) return;
+      
+      setStatsLoading(true);
+      
+      try {
+        // Fetch RFQs count
+        const rfqsResponse = await rfqApi.getByCompanyId(customerId);
+        const rfqsCount = rfqsResponse.data?.length || 0;
+        
+        // Fetch Part Numbers count
+        const partNumbersResponse = await partNumberApi.getByCompanyId(customerId);
+        const partNumbersCount = partNumbersResponse.data?.length || 0;
+        
+        // TODO: Add APIs for quotes sent, purchase orders, and quoted value when available
+        
+        setStats({
+          rfqsCount,
+          partNumbersCount,
+          quotesSent: 0, // Placeholder until API is available
+          purchaseOrders: 0, // Placeholder until API is available
+          quotedValue: "$0" // Placeholder until API is available
+        });
+      } catch (err) {
+        // Failed to fetch statistics - will show 0 values
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchStats();
   }, [customerId]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +167,6 @@ export default function CustomerProfilePage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to upload image";
       setError(errorMessage);
-      console.error('Avatar upload error:', err);
     } finally {
       setImageUploading(false);
       // Reset file input
@@ -221,7 +266,6 @@ export default function CustomerProfilePage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to update customer";
       setError(errorMessage);
-      console.error('Exception during company update:', err);
     } finally {
       setSaveLoading(false);
     }
@@ -261,12 +305,10 @@ export default function CustomerProfilePage() {
           setForm(presentationResponse.data);
         }
       } else {
-        console.error('Presentation upload failed:', uploadResult.error);
         setError(`Failed to upload presentation: ${uploadResult.error}`);
         throw new Error(uploadResult.error);
       }
     } catch (err) {
-      console.error('Presentation upload error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload presentation file';
       setError(errorMessage);
       throw err; // Re-throw to handle in the form component
@@ -418,7 +460,7 @@ export default function CustomerProfilePage() {
         <div onClick={() => setActiveTab("rfqs")} className="cursor-pointer">
           <SummaryCard 
             title="RFQs"
-            value={29}
+            value={statsLoading ? "..." : stats.rfqsCount}
             isActive={activeTab === "rfqs"}
             icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -428,7 +470,7 @@ export default function CustomerProfilePage() {
         <div onClick={() => setActiveTab("part-numbers")} className="cursor-pointer">
           <SummaryCard 
             title="Part Numbers"
-            value={157}
+            value={statsLoading ? "..." : stats.partNumbersCount}
             isActive={activeTab === "part-numbers"}
             icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 713 12V7a4 4 0 014-4z" />
@@ -437,21 +479,21 @@ export default function CustomerProfilePage() {
         </div>
         <SummaryCard 
           title="Quotes Sent"
-          value={87}
+          value={statsLoading ? "..." : stats.quotesSent}
           icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>}
         />
         <SummaryCard 
           title="Purchase Orders"
-          value={0}
+          value={statsLoading ? "..." : stats.purchaseOrders}
           icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>}
         />
         <SummaryCard 
           title="Quoted Value"
-          value="$2M"
+          value={statsLoading ? "..." : stats.quotedValue}
           icon={<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>}
