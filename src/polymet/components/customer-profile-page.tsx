@@ -211,7 +211,7 @@ export default function CustomerProfilePage() {
         // Remove from S3
         const deleteSuccess = await s3Service.deleteFile(s3Key);
         if (!deleteSuccess) {
-          console.warn('Failed to delete file from S3, but continuing with database update');
+          // Failed to delete file from S3, but continuing with database update
         }
       }
       

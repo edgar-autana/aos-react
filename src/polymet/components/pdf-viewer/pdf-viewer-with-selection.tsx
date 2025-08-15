@@ -75,7 +75,6 @@ export default function PDFViewerWithSelection({
       if (rawUrl.startsWith('/') || rawUrl.startsWith('part-numbers/')) {
         const baseUrl = 'https://aos-files-bucket.s3.us-east-1.amazonaws.com';
         const fullUrl = rawUrl.startsWith('/') ? `${baseUrl}${rawUrl}` : `${baseUrl}/${rawUrl}`;
-        console.log('Constructed URL:', fullUrl);
         return fullUrl;
       }
     }
@@ -87,9 +86,6 @@ export default function PDFViewerWithSelection({
 
   // Log PDF URL for debugging
   useEffect(() => {
-    console.log('Original PDF URL:', pdfUrl);
-    console.log('Processed PDF URL:', processedPdfUrl);
-    console.log('PDF URL is valid:', isValidPDFUrl(processedPdfUrl));
     
     if (processedPdfUrl && !isValidPDFUrl(processedPdfUrl)) {
       setError('Invalid PDF URL format');
@@ -104,9 +100,6 @@ export default function PDFViewerWithSelection({
   }, []);
 
   const onDocumentLoadError = useCallback((error: Error) => {
-    console.error('PDF load error:', error);
-    console.error('Original PDF URL:', pdfUrl);
-    console.error('Processed PDF URL that failed:', processedPdfUrl);
     
     // More specific error messages based on error type
     let errorMessage = 'Failed to load PDF document';
@@ -161,25 +154,20 @@ export default function PDFViewerWithSelection({
     const regionData = regionToCapture || selectedRegion;
     if (!regionData || !pageRef.current) return;
 
-    console.log('Capturing region:', regionData);
 
     // Find the PDF canvas element
     const pdfCanvas = pageRef.current.querySelector('canvas') as HTMLCanvasElement;
     if (!pdfCanvas) {
-      console.error('No PDF canvas found');
       return;
     }
 
     // Get the actual rendered size of the canvas element
     const canvasRect = pdfCanvas.getBoundingClientRect();
-    console.log('Canvas DOM size:', canvasRect.width, 'x', canvasRect.height);
-    console.log('Canvas actual size:', pdfCanvas.width, 'x', pdfCanvas.height);
 
     // Calculate scale factors to convert from DOM coordinates to canvas coordinates
     const scaleX = pdfCanvas.width / canvasRect.width;
     const scaleY = pdfCanvas.height / canvasRect.height;
 
-    console.log('Scale factors:', { scaleX, scaleY });
 
     // Convert region coordinates from DOM space to canvas space
     const canvasX = regionData.x * scaleX;
@@ -187,8 +175,6 @@ export default function PDFViewerWithSelection({
     const canvasWidth = regionData.width * scaleX;
     const canvasHeight = regionData.height * scaleY;
 
-    console.log('Region in DOM coordinates:', regionData);
-    console.log('Region in canvas coordinates:', { canvasX, canvasY, canvasWidth, canvasHeight });
 
     // Create a canvas to capture the selected region
     const canvas = document.createElement('canvas');
@@ -205,7 +191,6 @@ export default function PDFViewerWithSelection({
     const clampedWidth = Math.min(Math.round(canvasWidth), pdfCanvas.width - clampedX);
     const clampedHeight = Math.min(Math.round(canvasHeight), pdfCanvas.height - clampedY);
 
-    console.log('Clamped region:', { clampedX, clampedY, clampedWidth, clampedHeight });
 
     // Draw the selected region from the PDF canvas to our new canvas
     try {
@@ -219,10 +204,8 @@ export default function PDFViewerWithSelection({
       
       // Convert to base64
       const imageData = canvas.toDataURL('image/png');
-      console.log('Generated image data length:', imageData.length);
       onSnapshotCapture(imageData);
     } catch (error) {
-      console.error('Error capturing region:', error);
     }
   }, [selectedRegion, onSnapshotCapture]);
 

@@ -70,11 +70,9 @@ export default function AIAssistantChat({
           setMessages(response.conversation.messages || []);
         } else {
           setError('Failed to load conversation');
-          console.error('Failed to load conversation:', response.error);
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Failed to load conversation:', error);
           setError('Failed to load conversation');
           handleApiError(error, 'load conversation');
         }
@@ -231,10 +229,8 @@ export default function AIAssistantChat({
         // Remove the temporary user message if sending failed
         setMessages(prev => prev.slice(0, -1));
         setError('Failed to send message');
-        console.error('Failed to send message:', response.error);
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
       // Remove the temporary user message if sending failed
       setMessages(prev => prev.slice(0, -1));
       setError('Failed to send message');
@@ -431,7 +427,6 @@ export default function AIAssistantChat({
                       alt="Captured region" 
                       className="w-12 h-12 object-cover rounded border border-green-300 shadow-sm"
                       onError={(e) => {
-                        console.error('Failed to load region thumbnail:', e);
                         const target = e.currentTarget;
                         target.style.display = 'none';
                         // Show fallback icon

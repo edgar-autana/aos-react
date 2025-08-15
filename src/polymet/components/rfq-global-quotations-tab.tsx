@@ -57,14 +57,13 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
       const response = await globalQuotationApi.getByIdWithDetails(globalQuotation.id);
       
       if (response.error) {
-        console.error('Error fetching global quotation details:', response.error);
         return;
       }
       
       setSelectedGlobalQuotation(response.data);
       setIsDetailsModalOpen(true);
     } catch (err) {
-      console.error('Error fetching global quotation details:', err);
+      // Error handling
     }
   };
 

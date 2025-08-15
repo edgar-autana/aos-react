@@ -226,7 +226,6 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
                     <th className="text-left p-2 font-medium" style={{width: '25%'}}>RFQ</th>
                     <th className="text-left p-2 font-medium" style={{width: '20%'}}>Part Number</th>
                     <th className="text-left p-2 font-medium" style={{width: '15%'}}>Process</th>
-                    <th className="text-left p-2 font-medium" style={{width: '5%'}}>2D</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -264,23 +263,7 @@ export default function CustomerPartNumbersTab({ customerId }: CustomerPartNumbe
                           {partNumber.main_process || '—'}
                         </Badge>
                       </td>
-                      <td className="p-2" style={{width: '5%'}}>
-                        <div className="flex justify-center">
-                          {partNumber.part_drawing_2d ? (
-                            <a
-                              href={partNumber.part_drawing_2d}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <FileTextIcon className="h-4 w-4" />
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
-                      </td>
+                      
                     </tr>
                   ))}
                 </tbody>

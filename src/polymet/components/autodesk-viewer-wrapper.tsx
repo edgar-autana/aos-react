@@ -58,8 +58,6 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
       if (!containerRef.current || !window.Autodesk) return;
 
       try {
-        console.log('Initializing Autodesk Viewer (Official Wrapper)...');
-        console.log('URN:', urn);
         
         // Initialize Autodesk Viewer (official way from sample)
         window.Autodesk.Viewing.Initializer(
@@ -69,7 +67,6 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
             getAccessToken: getAccessToken
           },
           () => {
-            console.log('Autodesk Viewer initialized successfully');
             
             // Create viewer instance
             const viewer = new window.Autodesk.Viewing.GuiViewer3D(
@@ -84,32 +81,26 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
             
             // Load the model using the URN
             const documentId = 'urn:' + urn;
-            console.log('Loading document with ID:', documentId);
             
             window.Autodesk.Viewing.Document.load(
               documentId,
               (doc: any) => {
-                console.log('Document loaded successfully:', doc);
                 
                 // Get the default viewable
                 const defaultModel = doc.getRoot().getDefaultGeometry();
-                console.log('Default model:', defaultModel);
                 
                 // Load the model into the viewer
                 viewer.loadDocumentNode(doc, defaultModel).then(() => {
-                  console.log('Model loaded into viewer successfully');
                   setViewer(viewer);
                   setIsLoading(false);
                   onLoad?.();
                 }).catch((error: any) => {
-                  console.error('Error loading model into viewer:', error);
                   setError('Failed to load model into viewer');
                   setIsLoading(false);
                   onError?.('Failed to load model into viewer');
                 });
               },
               (error: any) => {
-                console.error('Error loading document:', error);
                 setError(`Failed to load document: ${error?.message || 'Unknown error'}`);
                 setIsLoading(false);
                 onError?.(`Failed to load document: ${error?.message || 'Unknown error'}`);
@@ -118,7 +109,6 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
           }
         );
       } catch (err) {
-        console.error('Error initializing Autodesk viewer:', err);
         setError('Failed to initialize Autodesk viewer');
         setIsLoading(false);
         onError?.('Failed to initialize Autodesk viewer');
@@ -128,7 +118,6 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
     const getAccessToken = async (callback: (token: string, expires: number) => void) => {
       try {
         const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
-        console.log('Requesting access token from:', aosApiBaseUrl);
         
         const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`);
         
@@ -137,10 +126,8 @@ export default function AutodeskViewerWrapper({ urn, onLoad, onError }: Autodesk
         }
         
         const data = await response.json();
-        console.log('Access token received successfully');
         callback(data.access_token, data.expires_in);
       } catch (error) {
-        console.error('Error getting access token:', error);
         setError('Failed to get access token');
         setIsLoading(false);
         onError?.('Failed to get access token');

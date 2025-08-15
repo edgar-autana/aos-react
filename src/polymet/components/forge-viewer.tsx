@@ -70,7 +70,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
 
       // Validate URN before proceeding
       if (!validateUrn(urn)) {
-        console.error('Invalid URN format:', urn);
         setError('Invalid URN format - URN must be base64 encoded');
         setIsLoading(false);
         onError?.('Invalid URN format - URN must be base64 encoded');
@@ -79,7 +78,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
 
       try {
         // Initialize the viewer
-        console.log('Initializing Forge Viewer with extended timeout...');
         const viewer = new window.Autodesk.Viewing.GuiViewer3D(
           viewerRef.current,
           { 
@@ -92,7 +90,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
         // Set additional timeout configuration
         if (viewer.setTimeout) {
           viewer.setTimeout(60000); // 60 seconds
-          console.log('Viewer timeout set to 60 seconds');
         }
 
         // Set up the viewer
@@ -106,33 +103,16 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
             viewer.start();
             
             // Load the model using the URN
-            console.log('Loading document with URN:', urn);
-            console.log('URN length:', urn.length);
-            console.log('URN validation:', {
-              isBase64: (() => {
-                try {
-                  atob(urn);
-                  return true;
-                } catch {
-                  return false;
-                }
-              })(),
-              startsWithUrn: urn.startsWith('dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6YW9zLWZpbGVzLXVybi9zdGVwLXYyLTNjY2YwODg1LTc4NGItNGNhMy1hMzVjLTMwYmZmMjIyYTY3NC5zdGVw')
-            });
             
             const documentId = 'urn:' + urn;
-            console.log('Full document ID:', documentId);
             
             // For testing, use a sample model if the URN doesn't work
             const testDocumentId = 'urn:adsk.objects:os.object:dm.obj/0.svf';
             
                                       // Try to load the actual model first
-            console.log('Attempting to load document with ID:', documentId);
-            console.log('URN being used:', urn);
             
             // Set a timeout to prevent infinite loading
             const loadingTimeout = setTimeout(() => {
-              console.log('Loading timeout reached - model may not be translated');
               setError('Loading timeout - model may not be translated to SVF format yet');
               setIsLoading(false);
               onError?.('Loading timeout - model may not be translated to SVF format yet');
@@ -142,16 +122,9 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
               documentId,
               (doc: any) => {
                 clearTimeout(loadingTimeout);
-                console.log('Document loaded successfully:', doc);
-                console.log('Document properties:', {
-                  hasRoot: !!doc?.getRoot(),
-                  rootProperties: doc?.getRoot() ? Object.keys(doc.getRoot()) : 'No root',
-                  urn: doc?.getRoot()?.getData()?.urn || 'No URN in document'
-                });
                 
                 // Validate document has valid structure
                 if (!doc || !doc.getRoot()) {
-                  console.error('Document has no root');
                   setError('Document structure is invalid - model may not be translated');
                   setIsLoading(false);
                   onError?.('Document structure is invalid - model may not be translated');
@@ -159,10 +132,8 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
                 }
                 
                 const defaultModel = doc.getRoot().getDefaultGeometry();
-                console.log('Default model:', defaultModel);
                 
                 if (!defaultModel) {
-                  console.error('No default geometry found');
                   setError('No 3D geometry found - model may need translation');
                   setIsLoading(false);
                   onError?.('No 3D geometry found - model may need translation');
@@ -170,12 +141,10 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
                 }
                 
                 viewer.loadDocumentNode(doc, defaultModel).then(() => {
-                  console.log('Model loaded in viewer successfully');
                   setIsLoading(false);
                   setViewer(viewer);
                   onLoad?.();
                 }).catch((error: any) => {
-                  console.error('Error loading model in viewer:', error);
                   setError('Failed to load model in viewer - may need translation');
                   setIsLoading(false);
                   onError?.('Failed to load model in viewer - may need translation');
@@ -183,14 +152,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
               },
               (error: any) => {
                 clearTimeout(loadingTimeout);
-                console.error('Error loading document:', error);
-                console.error('Document ID that failed:', documentId);
-                console.error('Error details:', {
-                  message: error?.message,
-                  status: error?.status,
-                  statusText: error?.statusText,
-                  response: error?.response
-                });
                 
                 // More specific error messages
                 let errorMessage = 'Failed to load 3D model';
@@ -214,7 +175,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
           }
         );
       } catch (err) {
-        console.error('Error initializing viewer:', err);
         setError('Failed to initialize 3D viewer');
         setIsLoading(false);
         onError?.('Failed to initialize 3D viewer');
@@ -224,7 +184,6 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
                  const getForgeToken = async (callback: (token: string, expires: number) => void) => {
                try {
                  const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
-                 console.log('Requesting Forge token from backend...', aosApiBaseUrl);
                  const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`);
                  
                  if (!response.ok) {
@@ -232,15 +191,8 @@ export default function ForgeViewer({ urn, onLoad, onError }: ForgeViewerProps) 
                  }
                  
                  const data = await response.json();
-                 console.log('Forge token received successfully');
-                 console.log('Token details:', {
-                   tokenLength: data.access_token?.length || 0,
-                   expiresIn: data.expires_in,
-                   tokenType: data.token_type
-                 });
                  callback(data.access_token, data.expires_in);
                } catch (error) {
-                 console.error('Error getting Forge token:', error);
                  throw new Error('Failed to get Forge access token');
                }
              };

@@ -47,7 +47,7 @@ export const partNumberApi = {
       }
 
       const { data, error } = await query
-        .order('created_at_atos', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         return { data: null, error: error.message };
@@ -66,7 +66,7 @@ export const partNumberApi = {
         .from('tb_part_number')
         .select('*')
         .eq('rfq', rfqId)
-        .order('created_at_atos', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         return { data: null, error: error.message };
@@ -120,7 +120,7 @@ export const partNumberApi = {
       }
 
       const { data, error, count } = await query
-        .order('created_at_atos', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -156,7 +156,7 @@ export const partNumberApi = {
         .from('tb_part_number')
         .select('*')
         .in('rfq', rfqIds)
-        .order('created_at_atos', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         return { data: null, error: error.message };

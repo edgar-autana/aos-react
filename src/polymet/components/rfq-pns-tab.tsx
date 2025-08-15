@@ -22,7 +22,8 @@ import {
   CheckCircleIcon,
   AlertCircle,
   Loader2,
-  Trash2Icon
+  Trash2Icon,
+  BoxIcon
 } from "lucide-react";
 import { usePartNumbersByRfqPaginated } from "@/hooks/part-number/usePartNumbers";
 import { PartNumber } from "@/types/part-number/partNumber";
@@ -30,8 +31,11 @@ import { QuotationWithDetails } from '@/types/quotation/quotation';
 import { GlobalQuotationPayload } from '@/types/global-quotation/globalQuotation';
 import { formatNumber } from "@/utils/dateUtils";
 import PartNumberCreateModal from "./part-number-create-modal";
+import PDFViewerModal from "./pdf-viewer/pdf-viewer-modal";
+import ThreeDViewerModal from "./3d-viewer-modal";
 import { useToast } from '@/hooks/use-toast';
 import { quotationApi } from '@/services/quotation/quotationApi';
+import { stepConverterApi } from '@/services/step-converter/stepConverterApi';
 import { useGlobalQuotationMutations } from '@/hooks/global-quotation/useGlobalQuotations';
 import { useGlobalQuoteSelection } from '@/hooks/global-quotation/useGlobalQuoteSelection';
 
@@ -61,6 +65,13 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [isCreateGlobalModalOpen, setIsCreateGlobalModalOpen] = useState(false);
   const [globalQuoteName, setGlobalQuoteName] = useState('');
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>('');
+  const [threeDViewerModalOpen, setThreeDViewerModalOpen] = useState(false);
+  const [selectedPartNumberFor3D, setSelectedPartNumberFor3D] = useState<PartNumber | null>(null);
+  const [convertingToUrn, setConvertingToUrn] = useState(false);
+  const [threeDError, setThreeDError] = useState<string | null>(null);
   
   const {
     partNumbers,
@@ -72,7 +83,8 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
     totalPages,
     handlePageChange,
     handlePageSizeChange,
-    refetch
+    refetch,
+    updatePartNumber
   } = usePartNumbersByRfqPaginated(rfqId);
 
   const getPartNumberDisplayName = (partNumber: PartNumber): string => {
@@ -207,6 +219,96 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
     return getSelectedQuotesForPartNumber(partNumberId).length > 0;
   };
 
+  // Handle 2D PDF viewing
+  const handle2DPdfView = (partNumber: PartNumber, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (partNumber.part_drawing_2d) {
+      setSelectedPdfUrl(partNumber.part_drawing_2d);
+      setSelectedPdfTitle(`2D Drawing - ${getPartNumberDisplayName(partNumber)}`);
+      setIsPdfViewerOpen(true);
+    }
+  };
+
+  // Handle 3D model viewing
+  const handle3DModelView = (partNumber: PartNumber, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!partNumber.part_drawing_3d) {
+      toast({
+        title: "No 3D Model",
+        description: "This part number doesn't have a 3D model uploaded.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedPartNumberFor3D(partNumber);
+    setThreeDError(null);
+    
+    // Always open the modal first
+    setThreeDViewerModalOpen(true);
+    
+    // If no URN exists, convert in background
+    if (!partNumber.urn) {
+      handleConvertToUrnForPartNumber(partNumber);
+    }
+  };
+
+  // Handle STEP to URN conversion for a specific part number
+  const handleConvertToUrnForPartNumber = async (partNumber: PartNumber) => {
+    if (!partNumber.part_drawing_3d) {
+      return;
+    }
+    
+    setConvertingToUrn(true);
+    setThreeDError(null);
+
+    try {
+      
+      const conversionResult = await stepConverterApi.convertStepToUrn(partNumber.part_drawing_3d);
+
+      if (!conversionResult.success || !conversionResult.urn) {
+        throw new Error(conversionResult.error || 'Failed to convert STEP to URN');
+      }
+
+      // Update the part number with the URN
+      const { partNumberApi } = await import('@/services/part-number/partNumberApi');
+      const response = await partNumberApi.update(partNumber.id, {
+        urn: conversionResult.urn
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: "Conversion Successful",
+        description: "STEP file has been converted to URN for 3D viewing.",
+      });
+
+      // Update the local state for the modal
+      setSelectedPartNumberFor3D(prev => prev ? { ...prev, urn: conversionResult.urn } : null);
+      
+      // Update the part number in the local table state without refetching to preserve order
+      updatePartNumber(partNumber.id, { urn: conversionResult.urn });
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to convert STEP to URN';
+      setThreeDError(errorMessage);
+      
+      toast({
+        title: "Conversion Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setConvertingToUrn(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -261,7 +363,8 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
                       <th className="text-left p-4 font-medium">Drawing Number</th>
                       <th className="text-left p-4 font-medium">Process</th>
                       <th className="text-left p-4 font-medium">Feasibility</th>
-                      <th className="text-left p-4 font-medium">Documents</th>
+                      <th className="text-center p-4 font-medium">2D</th>
+                      <th className="text-center p-4 font-medium">3D</th>
                       <th className="text-left p-4 font-medium">EAU</th>
                       <th className="text-left p-4 font-medium">Piece Price</th>
                       <th className="text-left p-4 font-medium">Quote</th>
@@ -300,31 +403,32 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
                             </div>
                           </td>
                           <td className="p-4">
-                            <div className="flex flex-col gap-1">
-                              {partNumber.part_drawing_2d && (
-                                <a
-                                  href={partNumber.part_drawing_2d}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                            <div className="flex justify-center">
+                              {partNumber.part_drawing_2d ? (
+                                <button
+                                  onClick={(e) => handle2DPdfView(partNumber, e)}
+                                  className="text-red-600 hover:text-red-700 transition-colors cursor-pointer"
+                                  title="View 2D Drawing"
                                 >
-                                  <FileTextIcon className="h-3 w-3" />
-                                  2D Drawing
-                                </a>
+                                  <FileTextIcon className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
                               )}
-                              {partNumber.part_drawing_3d && (
-                                <a
-                                  href={partNumber.part_drawing_3d}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex justify-center">
+                              {partNumber.part_drawing_3d ? (
+                                <button
+                                  onClick={(e) => handle3DModelView(partNumber, e)}
+                                  className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                                  title="View 3D Model"
                                 >
-                                  <FileImageIcon className="h-3 w-3" />
-                                  3D Model
-                                </a>
-                              )}
-                              {!partNumber.part_drawing_2d && !partNumber.part_drawing_3d && (
-                                <span className="text-sm text-muted-foreground">—</span>
+                                  <BoxIcon className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </div>
                           </td>
@@ -360,7 +464,7 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="text-center py-8">
+                        <td colSpan={10} className="text-center py-8">
                           <div className="text-muted-foreground">
                             <div className="mb-4">
                               <FileTextIcon className="w-12 h-12 mx-auto text-muted-foreground/50" />
@@ -510,6 +614,27 @@ export default function RfqPnsTab({ rfqId, companyId }: RfqPnsTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        open={isPdfViewerOpen}
+        onOpenChange={setIsPdfViewerOpen}
+        pdfUrl={selectedPdfUrl}
+        title={selectedPdfTitle}
+      />
+
+      {/* 3D Viewer Modal */}
+      <ThreeDViewerModal
+        isOpen={threeDViewerModalOpen}
+        onClose={() => {
+          setThreeDViewerModalOpen(false);
+          setThreeDError(null);
+          setSelectedPartNumberFor3D(null);
+        }}
+        urn={selectedPartNumberFor3D?.urn || null}
+        isLoading={convertingToUrn}
+        conversionError={threeDError}
+      />
     </div>
   );
 } 

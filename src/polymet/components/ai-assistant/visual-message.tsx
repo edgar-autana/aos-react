@@ -73,7 +73,6 @@ const VisualMessage: React.FC<VisualMessageProps> = ({ content, role, model, met
                 alt="Selected region" 
                 className="w-8 h-8 object-cover rounded border border-blue-300 shadow-sm"
                 onError={(e) => {
-                  console.error('Failed to load region thumbnail in message:', e);
                   const target = e.currentTarget;
                   target.style.display = 'none';
                   // Show fallback icon

@@ -30,6 +30,7 @@ import {
   MoldSteelCoreOption
 } from '@/constants/partNumber';
 import ThreeDViewerModal from './3d-viewer-modal';
+import PDFViewerModal from './pdf-viewer/pdf-viewer-modal';
 
 // Validation schema
 const partNumberAnalysisSchema = z.object({
@@ -55,7 +56,11 @@ const partNumberAnalysisSchema = z.object({
 
 type PartNumberAnalysisFormData = z.infer<typeof partNumberAnalysisSchema>;
 
-export default function PartNumberAnalysisForm() {
+interface PartNumberAnalysisFormProps {
+  onDataUpdate?: () => void;
+}
+
+export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnalysisFormProps = {}) {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -64,6 +69,9 @@ export default function PartNumberAnalysisForm() {
   const [fileUploading, setFileUploading] = useState<string | null>(null);
   const [threeDViewerModalOpen, setThreeDViewerModalOpen] = useState(false);
   const [convertingToUrn, setConvertingToUrn] = useState(false);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>('');
   
   // Fetch part number data
   const { partNumber, loading, error, refetch } = usePartNumber(id);
@@ -120,7 +128,6 @@ export default function PartNumberAnalysisForm() {
       };
 
       // Debug logging
-      console.log('Updating part number analysis:', updatePayload);
 
       // Save to database
       const response = await partNumberApi.update(partNumber.id, updatePayload);
@@ -137,6 +144,9 @@ export default function PartNumberAnalysisForm() {
 
       // Refetch the part number data to get the updated values
       refetch();
+      
+      // Notify parent component about the update
+      onDataUpdate?.();
       
     } catch (error) {
       console.error('Error updating part number analysis:', error);
@@ -157,11 +167,9 @@ export default function PartNumberAnalysisForm() {
     setFileUploading(fieldName);
     setFormError(null);
     
-    console.log(`Starting upload for ${fieldName}:`, file.name);
     
     try {
       const folder = `part-numbers/${partNumber.id}/drawings`;
-      console.log('Upload folder:', folder);
       
       const uploadResult = await s3Service.uploadFile({
         file,
@@ -169,7 +177,6 @@ export default function PartNumberAnalysisForm() {
         contentType: file.type
       });
 
-      console.log('S3 upload result:', uploadResult);
 
       if (!uploadResult.success || !uploadResult.url) {
         throw new Error(uploadResult.error || 'Upload failed');
@@ -180,12 +187,9 @@ export default function PartNumberAnalysisForm() {
         [fieldName]: uploadResult.url
       };
 
-      console.log('Updating part number with payload:', updatePayload);
-      console.log('Part number ID:', partNumber.id);
 
       const response = await partNumberApi.update(partNumber.id, updatePayload);
 
-      console.log('Database update response:', response);
 
       if (response.error) {
         throw new Error(response.error);
@@ -193,7 +197,6 @@ export default function PartNumberAnalysisForm() {
 
       // If it's a 2D PDF, automatically create a new conversation
       if (fieldName === 'part_drawing_2d' && uploadResult.url) {
-        console.log('2D PDF uploaded, automatically creating new conversation...');
         try {
           const { conversationService } = await import('@/polymet/services/conversation-service');
           const conversationResponse = await conversationService.createConversation({
@@ -205,7 +208,6 @@ export default function PartNumberAnalysisForm() {
           });
           
           if (conversationResponse.success) {
-            console.log('New conversation created:', conversationResponse.conversation?.id);
           } else {
             console.warn('Failed to create conversation');
           }
@@ -222,19 +224,14 @@ export default function PartNumberAnalysisForm() {
 
       // If it's a 3D file, automatically convert to URN
       if (fieldName === 'part_drawing_3d' && uploadResult.url) {
-        console.log('3D file uploaded, automatically converting to URN...');
-        console.log('Upload result URL:', uploadResult.url);
-        console.log('Upload result details:', uploadResult);
         
         // Wait for database update to complete and add delay for S3 consistency
         setTimeout(async () => {
           // Verify the file is accessible before conversion
           if (uploadResult.url) {
             try {
-              console.log('Verifying file availability before conversion...');
               const headResponse = await fetch(uploadResult.url, { method: 'HEAD' });
               if (headResponse.ok) {
-                console.log('File is accessible, proceeding with conversion using the new URL');
                 // Use the newly uploaded URL directly instead of relying on database state
                 handleConvertToUrnWithUrl(uploadResult.url, false);
               } else {
@@ -263,6 +260,9 @@ export default function PartNumberAnalysisForm() {
 
       // Refetch the part number data
       refetch();
+      
+      // Notify parent component about the update
+      onDataUpdate?.();
       
     } catch (error) {
       console.error(`Error uploading ${fieldName}:`, error);
@@ -304,6 +304,9 @@ export default function PartNumberAnalysisForm() {
 
       // Refetch the part number data
       refetch();
+      
+      // Notify parent component about the update
+      onDataUpdate?.();
       
     } catch (error) {
       console.error(`Error deleting ${fieldName}:`, error);
@@ -356,18 +359,8 @@ export default function PartNumberAnalysisForm() {
     setFormError(null);
 
     try {
-      console.log('🚀 ==========================================');
-      console.log('🚀 STARTING STEP TO URN CONVERSION WITH SPECIFIC URL');
-      console.log('🚀 Part Number ID:', partNumber.id);
-      console.log('🚀 Using file URL:', fileUrl);
-      console.log('🚀 Timestamp:', new Date().toISOString());
-      
       // Parse URL to get more details
       const url = new URL(fileUrl);
-      console.log('🚀 URL host:', url.host);
-      console.log('🚀 URL pathname:', url.pathname);
-      console.log('🚀 URL filename:', url.pathname.split('/').pop());
-      console.log('🚀 ==========================================');
       
       const conversionResult = await stepConverterApi.convertStepToUrn(fileUrl);
 
@@ -395,6 +388,9 @@ export default function PartNumberAnalysisForm() {
 
       // Refetch the part number data
       refetch();
+      
+      // Notify parent component about the update
+      onDataUpdate?.();
       
     } catch (error) {
       console.error('❌ Error converting STEP to URN:', error);
@@ -499,27 +495,42 @@ export default function PartNumberAnalysisForm() {
           )}
 
           {/* 2D Drawing File */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">2D Drawing (PDF)</Label>
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              2D Drawing (PDF)
+            </Label>
             <div className="flex items-center gap-2">
               {partNumber.part_drawing_2d ? (
-                <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50 flex-1">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm truncate">{getFileNameFromUrl(partNumber.part_drawing_2d)}</span>
-                  <div className="flex gap-1 ml-auto">
+                <div className="flex items-center gap-3 p-6 border-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 flex-1 hover:shadow-md transition-all duration-200">
+                  <div className="flex-shrink-0">
+                    <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-900 truncate">{getFileNameFromUrl(partNumber.part_drawing_2d)}</p>
+                    <p className="text-xs text-blue-600">PDF Document • Ready for analysis</p>
+                  </div>
+                  <div className="flex gap-2 ml-auto">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => window.open(partNumber.part_drawing_2d!, '_blank')}
+                            className="bg-white hover:bg-blue-50 border-blue-200"
+                            onClick={() => {
+                              setSelectedPdfUrl(partNumber.part_drawing_2d!);
+                              setSelectedPdfTitle(`${partNumber.part_name || 'Part'} - 2D Drawing`);
+                              setPdfViewerOpen(true);
+                            }}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>View file</p>
+                          <p>View PDF</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -527,26 +538,43 @@ export default function PartNumberAnalysisForm() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => {
-                              const link = document.createElement('a');
-                              link.href = partNumber.part_drawing_2d!;
-                              link.download = getFileNameFromUrl(partNumber.part_drawing_2d);
-                              link.click();
+                            className="bg-white hover:bg-blue-50 border-blue-200"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(partNumber.part_drawing_2d!);
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = getFileNameFromUrl(partNumber.part_drawing_2d);
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(url);
+                              } catch (error) {
+                                console.error('Error downloading file:', error);
+                                // Fallback to simple download
+                                const link = document.createElement('a');
+                                link.href = partNumber.part_drawing_2d!;
+                                link.download = getFileNameFromUrl(partNumber.part_drawing_2d);
+                                link.target = '_blank';
+                                link.click();
+                              }
                             }}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Download file</p>
+                          <p>Download PDF</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="outline" size="sm" className="bg-white hover:bg-red-50 border-red-200">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </AlertDialogTrigger>
@@ -571,9 +599,14 @@ export default function PartNumberAnalysisForm() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-md border-muted-foreground/25 flex-1">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">No 2D drawing uploaded</span>
+                <div className="flex items-center justify-center gap-4 p-8 border-2 border-dashed rounded-lg border-gray-300 bg-gray-50 flex-1 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200">
+                  <div className="text-center">
+                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 mb-1">No 2D drawing uploaded</p>
+                    <p className="text-sm text-gray-500">Upload a PDF file to enable AI analysis</p>
+                  </div>
                 </div>
               )}
               <input
@@ -584,7 +617,6 @@ export default function PartNumberAnalysisForm() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    console.log('File selected for 2D upload:', file.name, file.size);
                     handleFileUpload(file, 'part_drawing_2d');
                   }
                 }}
@@ -594,21 +626,22 @@ export default function PartNumberAnalysisForm() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant={partNumber.part_drawing_2d ? "outline" : "default"}
+                      size="lg"
+                      className={partNumber.part_drawing_2d ? "bg-white hover:bg-blue-50 border-blue-200 px-6" : "bg-blue-600 hover:bg-blue-700 text-white px-8"}
                       onClick={() => {
-                        console.log('2D upload button clicked');
                         document.getElementById('2d-drawing-upload')?.click();
                       }}
                       disabled={fileUploading === 'part_drawing_2d'}
                     >
                       {fileUploading === 'part_drawing_2d' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
                       ) : partNumber.part_drawing_2d ? (
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-5 w-5 mr-2" />
                       ) : (
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-5 w-5 mr-2" />
                       )}
+                      {fileUploading === 'part_drawing_2d' ? 'Uploading...' : partNumber.part_drawing_2d ? 'Replace' : 'Upload PDF'}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -620,20 +653,31 @@ export default function PartNumberAnalysisForm() {
           </div>
 
           {/* 3D Model File */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">3D Model (STEP/STP)</Label>
-            <div className="flex items-center gap-2">
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Box className="h-5 w-5 text-green-600" />
+              3D Model (STEP/STP)
+            </Label>
+            <div className="flex items-center gap-4">
               {partNumber.part_drawing_3d ? (
-                <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50 flex-1">
-                  <FileIcon className="h-4 w-4 text-green-600" />
-                  <span className="text-sm truncate">{getFileNameFromUrl(partNumber.part_drawing_3d)}</span>
-                  <div className="flex gap-1 ml-auto">
+                <div className="flex items-center gap-3 p-6 border-2 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 flex-1 hover:shadow-md transition-all duration-200">
+                  <div className="flex-shrink-0">
+                    <div className="h-12 w-12 bg-green-600 rounded-full flex items-center justify-center">
+                      <Box className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-green-900 truncate">{getFileNameFromUrl(partNumber.part_drawing_3d)}</p>
+                    <p className="text-xs text-green-600">STEP File • {partNumber.urn ? 'Ready for 3D viewing' : 'Processing...'}</p>
+                  </div>
+                  <div className="flex gap-2 ml-auto">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
+                            className="bg-white hover:bg-green-50 border-green-200"
                             onClick={handleOpen3DViewer}
                             disabled={convertingToUrn}
                           >
@@ -653,24 +697,9 @@ export default function PartNumberAnalysisForm() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => window.open(partNumber.part_drawing_3d!, '_blank')}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View file</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                            className="bg-white hover:bg-green-50 border-green-200"
                             onClick={() => {
                               const link = document.createElement('a');
                               link.href = partNumber.part_drawing_3d!;
@@ -688,7 +717,7 @@ export default function PartNumberAnalysisForm() {
                     </TooltipProvider>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="outline" size="sm" className="bg-white hover:bg-red-50 border-red-200">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </AlertDialogTrigger>
@@ -713,9 +742,14 @@ export default function PartNumberAnalysisForm() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-md border-muted-foreground/25 flex-1">
-                  <FileIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">No 3D model uploaded</span>
+                <div className="flex items-center justify-center gap-4 p-8 border-2 border-dashed rounded-lg border-gray-300 bg-gray-50 flex-1 hover:border-green-400 hover:bg-green-50 transition-all duration-200">
+                  <div className="text-center">
+                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Box className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 mb-1">No 3D Model</p>
+                    <p className="text-sm text-gray-500">Upload a STEP file for 3D viewing</p>
+                  </div>
                 </div>
               )}
               <input
@@ -726,7 +760,6 @@ export default function PartNumberAnalysisForm() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    console.log('File selected for 3D upload:', file.name, file.size);
                     handleFileUpload(file, 'part_drawing_3d');
                   }
                 }}
@@ -736,21 +769,22 @@ export default function PartNumberAnalysisForm() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant={partNumber.part_drawing_3d ? "outline" : "default"}
+                      size="lg"
+                      className={partNumber.part_drawing_3d ? "bg-white hover:bg-green-50 border-green-200 px-6" : "bg-green-600 hover:bg-green-700 text-white px-8"}
                       onClick={() => {
-                        console.log('3D upload button clicked');
                         document.getElementById('3d-model-upload')?.click();
                       }}
                       disabled={fileUploading === 'part_drawing_3d'}
                     >
                       {fileUploading === 'part_drawing_3d' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
                       ) : partNumber.part_drawing_3d ? (
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-5 w-5 mr-2" />
                       ) : (
-                        <FileIcon className="h-4 w-4" />
+                        <Box className="h-5 w-5 mr-2" />
                       )}
+                      {fileUploading === 'part_drawing_3d' ? 'Uploading...' : partNumber.part_drawing_3d ? 'Replace' : 'Upload STEP'}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -995,6 +1029,13 @@ export default function PartNumberAnalysisForm() {
           urn={partNumber?.urn || null}
           isLoading={convertingToUrn}
           conversionError={formError}
+        />
+        
+        <PDFViewerModal
+          open={pdfViewerOpen}
+          onOpenChange={setPdfViewerOpen}
+          pdfUrl={selectedPdfUrl}
+          title={selectedPdfTitle}
         />
     </div>
   );

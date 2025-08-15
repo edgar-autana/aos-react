@@ -131,6 +131,12 @@ export function usePartNumbersByRfqPaginated(
     fetchPartNumbers();
   }, [rfqId, filters]);
 
+  const updatePartNumber = useCallback((id: string, updates: Partial<PartNumber>) => {
+    setPartNumbers(prev => prev.map(pn => 
+      pn.id === id ? { ...pn, ...updates } : pn
+    ));
+  }, []);
+
   return {
     partNumbers,
     loading,
@@ -141,7 +147,8 @@ export function usePartNumbersByRfqPaginated(
     totalPages,
     handlePageChange,
     handlePageSizeChange,
-    refetch: fetchPartNumbers
+    refetch: fetchPartNumbers,
+    updatePartNumber
   };
 }
 
