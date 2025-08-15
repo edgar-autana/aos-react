@@ -2,6 +2,7 @@
 export interface GlobalQuotation {
   id: string;
   company_id: string;
+  rfq?: string | null; // New field for RFQ relationship
   name: string;
   description: string | null;
   status: 'draft' | 'sent' | 'accepted' | 'rejected';
@@ -18,6 +19,7 @@ export interface GlobalQuotation {
 // Global quotation payload for creating/updating
 export interface GlobalQuotationPayload {
   company_id?: string;
+  rfq?: string | null; // New field for RFQ relationship
   name?: string;
   description?: string | null;
   status?: 'draft' | 'sent' | 'accepted' | 'rejected';
@@ -46,6 +48,11 @@ export interface GlobalQuotationWithDetails extends GlobalQuotation {
     id: string;
     name: string;
     image?: string;
+  };
+  rfq_info?: {
+    id: string;
+    name: string;
+    slug_name?: string;
   };
 }
 

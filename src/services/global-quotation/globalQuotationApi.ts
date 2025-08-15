@@ -54,11 +54,18 @@ export const globalQuotationApi = {
   },
 
   // Get global quotations by company ID
-  async getByCompanyId(companyId: string): Promise<ApiResponse<GlobalQuotation[]>> {
+  async getByCompanyId(companyId: string): Promise<ApiResponse<GlobalQuotationWithDetails[]>> {
     try {
       const { data, error } = await supabase
         .from('tb_global_quotation')
-        .select('*')
+        .select(`
+          *,
+          rfq_info:tb_rfq!tb_global_quotation_rfq_fkey (
+            id,
+            name,
+            slug_name
+          )
+        `)
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
@@ -74,6 +81,28 @@ export const globalQuotationApi = {
     }
   },
 
+  // Get global quotations by RFQ ID
+  async getByRfqId(rfqId: string): Promise<ApiResponse<GlobalQuotation[]>> {
+    try {
+      // Now we can directly filter by rfq field
+      const { data, error } = await supabase
+        .from('tb_global_quotation')
+        .select('*')
+        .eq('rfq', rfqId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching global quotations by RFQ:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data: data || [], error: null };
+    } catch (err) {
+      console.error('Exception in getByRfqId:', err);
+      return { data: null, error: 'Failed to fetch global quotations' };
+    }
+  },
+
   // Get global quotation by ID with details
   async getByIdWithDetails(id: string): Promise<ApiResponse<GlobalQuotationWithDetails>> {
     try {
@@ -85,6 +114,11 @@ export const globalQuotationApi = {
             id,
             name,
             image
+          ),
+          rfq_info:tb_rfq!tb_global_quotation_rfq_fkey (
+            id,
+            name,
+            slug_name
           ),
           part_numbers:tb_global_quotation_part_number (
             id,

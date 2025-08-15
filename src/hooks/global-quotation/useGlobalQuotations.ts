@@ -4,7 +4,7 @@ import { GlobalQuotation, GlobalQuotationPayload, GlobalQuotationFilters, Global
 
 // Hook for fetching global quotations by company
 export const useGlobalQuotationsByCompany = (companyId: string) => {
-  const [globalQuotations, setGlobalQuotations] = useState<GlobalQuotation[]>([]);
+  const [globalQuotations, setGlobalQuotations] = useState<GlobalQuotationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +32,40 @@ export const useGlobalQuotationsByCompany = (companyId: string) => {
   useEffect(() => {
     refetch();
   }, [companyId]);
+
+  return { globalQuotations, loading, error, refetch };
+};
+
+// Hook for fetching global quotations by RFQ ID
+export const useGlobalQuotationsByRfq = (rfqId: string) => {
+  const [globalQuotations, setGlobalQuotations] = useState<GlobalQuotation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = async () => {
+    if (!rfqId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await globalQuotationApi.getByRfqId(rfqId);
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
+        setGlobalQuotations(response.data || []);
+      }
+    } catch (err) {
+      setError('Failed to fetch global quotations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refetch();
+  }, [rfqId]);
 
   return { globalQuotations, loading, error, refetch };
 };

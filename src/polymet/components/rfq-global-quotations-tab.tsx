@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,21 +12,20 @@ import {
   DollarSignIcon,
   EyeIcon,
   ExternalLinkIcon,
-  BuildingIcon,
-  FileIcon
+  BuildingIcon
 } from 'lucide-react';
-import { useGlobalQuotationsByCompany } from '@/hooks/global-quotation/useGlobalQuotations';
+import { useGlobalQuotationsByRfq } from '@/hooks/global-quotation/useGlobalQuotations';
 import { GlobalQuotation } from '@/types/global-quotation/globalQuotation';
 import { GlobalQuotationWithDetails } from '@/types/global-quotation/globalQuotation';
 import { formatNumber, formatCurrency } from '@/utils/numberUtils';
 
-interface CustomerGlobalQuotationsTabProps {
-  customerId: string;
+interface RfqGlobalQuotationsTabProps {
+  rfqId: string;
 }
 
-export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlobalQuotationsTabProps) {
+export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTabProps) {
   const navigate = useNavigate();
-  const { globalQuotations, loading, error, refetch } = useGlobalQuotationsByCompany(customerId);
+  const { globalQuotations, loading, error, refetch } = useGlobalQuotationsByRfq(rfqId);
   const [selectedGlobalQuotation, setSelectedGlobalQuotation] = useState<GlobalQuotationWithDetails | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -40,8 +39,6 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
     };
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
-
-
 
   // Format date
   const formatDate = (dateString: string | null): string => {
@@ -96,8 +93,6 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
     );
   }
 
-  console.log(selectedGlobalQuotation);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -105,12 +100,10 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
         <div>
           <h3 className="text-lg font-semibold">Global Quotations</h3>
           <p className="text-sm text-muted-foreground">
-            View and manage global quotations for this customer
+            View and manage global quotations created from this RFQ's part numbers
           </p>
         </div>
       </div>
-
-
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -171,7 +164,7 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
             <div className="text-center py-8 text-muted-foreground">
               <FileTextIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-lg font-medium">No global quotations yet</p>
-              <p className="text-sm">Global quotations will appear here when created from RFQs.</p>
+              <p className="text-sm">Create global quotations from the Part Numbers tab.</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -197,18 +190,6 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
                           <CalendarIcon className="h-3 w-3" />
                           <span>Created {formatDate(globalQuotation.created_at)}</span>
                         </div>
-                        {globalQuotation.rfq_info && (
-                          <div className="flex items-center gap-1">
-                            <FileIcon className="h-3 w-3" />
-                            <span>From RFQ: </span>
-                            <Link 
-                              to={`/rfqs/${globalQuotation.rfq_info.id}`}
-                              className="text-blue-600 hover:text-blue-700 underline"
-                            >
-                              {globalQuotation.rfq_info.name || globalQuotation.rfq_info.slug_name || `RFQ-${globalQuotation.rfq_info.id.slice(-6)}`}
-                            </Link>
-                          </div>
-                        )}
                         {globalQuotation.total_value && (
                           <div className="flex items-center gap-1">
                             <DollarSignIcon className="h-3 w-3" />
@@ -268,20 +249,6 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
                       <label className="text-xs text-muted-foreground">Created</label>
                       <p className="text-sm">{formatDate(selectedGlobalQuotation.created_at)}</p>
                     </div>
-                    {selectedGlobalQuotation.rfq_info && (
-                      <div>
-                        <label className="text-xs text-muted-foreground">Source RFQ</label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <FileIcon className="h-3 w-3 text-muted-foreground" />
-                          <Link 
-                            to={`/rfqs/${selectedGlobalQuotation.rfq_info.id}`}
-                            className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                          >
-                            {selectedGlobalQuotation.rfq_info.name || selectedGlobalQuotation.rfq_info.slug_name || `RFQ-${selectedGlobalQuotation.rfq_info.id.slice(-6)}`}
-                          </Link>
-                        </div>
-                      </div>
-                    )}
                     {selectedGlobalQuotation.total_value && (
                       <div>
                         <label className="text-xs text-muted-foreground">Total Value</label>
@@ -318,14 +285,14 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
                                 {partNumberItem.part_number?.drawing_number || 'No drawing number'}
                               </p>
                             </div>
-                              <div>
-                               <h5 className="font-medium">
-                                 Total Price
-                               </h5>
-                               <p className="text-sm text-muted-foreground">
-                                 {formatCurrency(partNumberItem?.quotation?.total_price)}
-                               </p>
-                             </div>
+                            <div>
+                              <h5 className="font-medium">
+                                Total Price
+                              </h5>
+                              <p className="text-sm text-muted-foreground">
+                                {formatCurrency(partNumberItem?.quotation?.total_price)}
+                              </p>
+                            </div>
                             <Button
                               variant="outline"
                               size="sm"
@@ -431,4 +398,4 @@ export default function CustomerGlobalQuotationsTab({ customerId }: CustomerGlob
       </Dialog>
     </div>
   );
-} 
+}

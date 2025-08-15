@@ -22,6 +22,7 @@ import { getRfqDisplayName, getRfqStatusColor, getRfqStatusText, formatRfqDate }
 import RfqPnsTab from "@/polymet/components/rfq-pns-tab";
 import RfqBidsTab from "@/polymet/components/rfq-bids-tab";
 import RfqInfoTab from "@/polymet/components/rfq-info-tab";
+import RfqGlobalQuotationsTab from "@/polymet/components/rfq-global-quotations-tab";
 
 export default function RfqDetailsPage() {
   const { rfqId = "" } = useParams();
@@ -138,18 +139,23 @@ export default function RfqDetailsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="pns" className="mt-6">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto">
+        <TabsList className="grid w-full grid-cols-4 md:w-auto">
           <TabsTrigger value="pns">PNs</TabsTrigger>
           <TabsTrigger value="bids">BIDs</TabsTrigger>
+          <TabsTrigger value="global-quotations">Global Quotations</TabsTrigger>
           <TabsTrigger value="info">INFO</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pns" className="space-y-6 mt-6">
-          <RfqPnsTab rfqId={rfqId} />
+          <RfqPnsTab rfqId={rfqId} companyId={rfq.company} />
         </TabsContent>
 
         <TabsContent value="bids" className="space-y-6 mt-6">
           <RfqBidsTab rfqId={rfqId} />
+        </TabsContent>
+
+        <TabsContent value="global-quotations" className="space-y-6 mt-6">
+          <RfqGlobalQuotationsTab rfqId={rfqId} />
         </TabsContent>
 
         <TabsContent value="info" className="space-y-6 mt-6">
