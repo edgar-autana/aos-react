@@ -27,9 +27,20 @@ export default function ThreeDViewerModal({
   // Auto-open viewer when modal opens and URN is available
   useEffect(() => {
     if (isOpen && urn && !isLoading && !conversionError) {
-      setShowViewer(true);
+      // Small delay to ensure smooth transition from loading to viewer
+      const timer = setTimeout(() => setShowViewer(true), 100);
+      return () => clearTimeout(timer);
+    } else if (isOpen && !urn && !isLoading) {
+      setShowViewer(false);
     }
   }, [isOpen, urn, isLoading, conversionError]);
+
+  // Reset viewer state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowViewer(false);
+    }
+  }, [isOpen]);
 
     const handleCopyUrn = async () => {
     if (!urn) return;

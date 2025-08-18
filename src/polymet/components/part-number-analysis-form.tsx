@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,6 +69,8 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
   const [fileUploading, setFileUploading] = useState<string | null>(null);
   const [threeDViewerModalOpen, setThreeDViewerModalOpen] = useState(false);
   const [convertingToUrn, setConvertingToUrn] = useState(false);
+  const [conversionJustCompleted, setConversionJustCompleted] = useState(false);
+  const modalShouldStayOpen = useRef(false);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>('');
@@ -93,6 +95,17 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
 
   // Watch feasibility to show/hide reason_feasibility field
   const feasibilityValue = watch("feasibility");
+
+  // Keep modal open if it should stay open during conversion
+  useEffect(() => {
+    if (modalShouldStayOpen.current && !threeDViewerModalOpen) {
+      // Use a small delay to prevent rapid open/close cycles
+      const timer = setTimeout(() => {
+        setThreeDViewerModalOpen(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [threeDViewerModalOpen]);
 
   // Update form when part number data is loaded
   useEffect(() => {
@@ -359,8 +372,13 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
     setFormError(null);
 
     try {
-      // Parse URL to get more details
-      const url = new URL(fileUrl);
+      // Validate URL before processing
+      let url: URL;
+      try {
+        url = new URL(fileUrl);
+      } catch (urlError) {
+        throw new Error('Invalid file URL provided');
+      }
       
       const conversionResult = await stepConverterApi.convertStepToUrn(fileUrl);
 
@@ -386,11 +404,23 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
         });
       }
 
-      // Refetch the part number data
-      refetch();
+      // Mark that conversion just completed to prevent modal from closing
+      setConversionJustCompleted(true);
+      modalShouldStayOpen.current = true;
       
-      // Notify parent component about the update
-      onDataUpdate?.();
+      // Refetch the part number data to get the new URN
+      await refetch();
+      
+      // Delay parent notification to prevent immediate re-render
+      setTimeout(() => {
+        onDataUpdate?.();
+      }, 300);
+      
+      // Clear the flags after modal has had time to show the 3D viewer
+      setTimeout(() => {
+        setConversionJustCompleted(false);
+        modalShouldStayOpen.current = false;
+      }, 2000);
       
     } catch (error) {
       console.error('❌ Error converting STEP to URN:', error);
@@ -438,8 +468,9 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
     // Always open the modal first
     setThreeDViewerModalOpen(true);
     
-    // If no URN exists, convert in background
+    // If no URN exists, convert in background and keep modal open
     if (!partNumber.urn) {
+      modalShouldStayOpen.current = true;
       handleConvertToUrn(false); // Don't show toast since modal will show the result
     }
   };
@@ -668,7 +699,7 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-green-900 truncate">{getFileNameFromUrl(partNumber.part_drawing_3d)}</p>
-                    <p className="text-xs text-green-600">STEP File • {partNumber.urn ? 'Ready for 3D viewing' : 'Processing...'}</p>
+                    <p className="text-xs text-green-600">STEP File • {partNumber.urn ? 'Ready for 3D viewing' : 'Click "View 3D" to convert for viewing'}</p>
                   </div>
                   <div className="flex gap-2 ml-auto">
                     <TooltipProvider>
@@ -1023,8 +1054,21 @@ export default function PartNumberAnalysisForm({ onDataUpdate }: PartNumberAnaly
               <ThreeDViewerModal
           isOpen={threeDViewerModalOpen}
           onClose={() => {
-            setThreeDViewerModalOpen(false);
-            setFormError(null); // Clear error when closing modal
+            // Don't close modal if conversion just completed or if it should stay open
+            // But allow closing if there's a conversion error
+            if (!conversionJustCompleted && !modalShouldStayOpen.current) {
+              setThreeDViewerModalOpen(false);
+              setFormError(null); // Clear error when closing modal
+              setConvertingToUrn(false); // Reset conversion state
+              modalShouldStayOpen.current = false; // Reset modal stay open flag
+            } else if (formError) {
+              // Allow closing if there's an error, regardless of other flags
+              setThreeDViewerModalOpen(false);
+              setFormError(null);
+              setConvertingToUrn(false);
+              modalShouldStayOpen.current = false;
+              setConversionJustCompleted(false);
+            }
           }}
           urn={partNumber?.urn || null}
           isLoading={convertingToUrn}
