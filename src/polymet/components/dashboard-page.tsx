@@ -15,6 +15,8 @@ import {
   CalendarIcon,
   CheckCircleIcon,
   ClockIcon,
+  DatabaseIcon,
+  CheckIcon,
 } from "lucide-react";
 import { CNC_ORDERS, CncOrder } from "@/polymet/data/cnc-orders-data";
 import OrderListItem from "@/polymet/components/order-list-item";
@@ -66,6 +68,35 @@ export default function DashboardPage() {
           Overview of your CNC manufacturing orders
         </p>
       </div>
+
+      {/* System Status Banner */}
+      <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full">
+              <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <DatabaseIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <span className="font-medium text-green-800 dark:text-green-200">
+                  Sistema Actualizado
+                </span>
+                <span className="px-2 py-1 text-xs bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 rounded-full font-medium">
+                  NEW
+                </span>
+              </div>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                Migración de archivos completada: 600 PDFs 2D y 309 archivos STEP 3D migrados exitosamente a S3
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-green-800 dark:text-green-200">✓ Activo</div>
+              <div className="text-xs text-green-600 dark:text-green-400">Sistema optimizado</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
