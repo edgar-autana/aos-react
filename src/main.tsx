@@ -5,6 +5,8 @@ import App from "./App";
 import "./index.css";
 import { ClerkProvider } from '@clerk/clerk-react';
 
+// GitHub Actions Test - Simple change for deployment verification
+
 // Make React and ReactDOM globally available immediately (not in useEffect)
 window.React = React;
 window.ReactDOM = ReactDOM;
