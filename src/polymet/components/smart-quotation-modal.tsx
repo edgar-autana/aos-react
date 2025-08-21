@@ -97,8 +97,8 @@ export default function SmartQuotationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
             Create Smart Quotation
@@ -108,22 +108,20 @@ export default function SmartQuotationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {/* Part Number Info Card */}
-            <Card className="bg-muted/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Part Information</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Card className="bg-muted/30 border-muted">
+              <CardContent className="pt-4 pb-3">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Part Name</Label>
-                    <p className="font-medium">{partNumber.part_name}</p>
+                    <Label className="text-xs text-muted-foreground mb-1">Part Name</Label>
+                    <p className="font-medium text-sm">{partNumber.part_name}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Drawing Number</Label>
-                    <p className="font-medium">{partNumber.drawing_number}</p>
+                    <Label className="text-xs text-muted-foreground mb-1">Drawing Number</Label>
+                    <p className="font-medium text-sm">{partNumber.drawing_number}</p>
                   </div>
                 </div>
               </CardContent>
@@ -242,24 +240,26 @@ export default function SmartQuotationModal({
               </div>
 
               {/* Calculated Values */}
-              <div className="rounded-lg bg-primary/5 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                  <Calculator className="h-4 w-4" />
-                  Calculated Values
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Total Piece Price DDP</Label>
-                    <p className="text-lg font-semibold">${totalPiecePriceDDP.toFixed(4)}</p>
-                    <p className="text-xs text-muted-foreground">EXW + Freight</p>
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary mb-3">
+                    <Calculator className="h-4 w-4" />
+                    Calculated Values
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Total Annual Value</Label>
-                    <p className="text-lg font-semibold">${totalAnnualValue.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground">EAU × DDP Price</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Total Piece Price DDP</Label>
+                      <p className="text-lg font-semibold">${totalPiecePriceDDP.toFixed(4)}</p>
+                      <p className="text-xs text-muted-foreground">EXW + Freight</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Total Annual Value</Label>
+                      <p className="text-lg font-semibold text-primary">${totalAnnualValue.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">EAU × DDP Price</p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Separator />
@@ -279,7 +279,7 @@ export default function SmartQuotationModal({
                     <FormControl>
                       <Textarea
                         placeholder="Describe any special fixtures, tooling, or setup requirements..."
-                        className="min-h-[100px]"
+                        className="min-h-[80px] resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -293,35 +293,39 @@ export default function SmartQuotationModal({
             </div>
 
             {/* Info Alert */}
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="border-blue-200 bg-blue-50/50">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm text-blue-900">
                 This quotation will be linked to the current RFQ and company. All calculated values will be stored automatically.
               </AlertDescription>
             </Alert>
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Smart Quotation'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <DialogFooter className="px-6 py-4 border-t bg-background">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Smart Quotation'
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
