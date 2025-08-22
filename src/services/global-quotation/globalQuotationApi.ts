@@ -129,7 +129,8 @@ export const globalQuotationApi = {
               id,
               part_name,
               drawing_number,
-              estimated_anual_units
+              estimated_anual_units,
+              main_process
             ),
             quotation:tb_quotation!tb_global_quotation_part_number_quotation_id_fkey (
               id,
@@ -137,6 +138,10 @@ export const globalQuotationApi = {
               status,
               unit_price,
               total_price,
+              quantity,
+              moq1,
+              cnc_fixtures,
+              notes,
               supplier:tb_supplier!tb_quotation_supplier_id_fkey (
                 id,
                 name,
@@ -226,6 +231,28 @@ export const globalQuotationApi = {
     }
   },
 
+  // Update PDF URL for global quotation
+  async updatePdfUrl(id: string, pdfUrl: string): Promise<ApiResponse<GlobalQuotation>> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_global_quotation')
+        .update({ pdf_url: pdfUrl })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating PDF URL:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      console.error('Exception in updatePdfUrl:', err);
+      return { data: null, error: 'Failed to update PDF URL' };
+    }
+  },
+
   // Delete global quotation
   async delete(id: string): Promise<ApiResponse<boolean>> {
     try {
@@ -254,7 +281,7 @@ export const globalQuotationApi = {
         .insert([{
           global_quotation_id: globalQuotationId,
           part_number_id: partNumberId,
-          quotation_id: quotationId
+          quotation_id: quotationId // Required - preliminary quotations use system supplier
         }])
         .select()
         .single();

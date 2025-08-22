@@ -1,0 +1,26 @@
+<svg width="300" height="80" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- AUTANA Logo -->
+  <g fill="#4A2C7D">
+    <!-- Símbolo de las dos líneas -->
+    <path d="M20 15 L20 50 Q20 65 35 65 L35 15 M35 65 L35 70" />
+    <path d="M50 15 L50 50 Q50 65 65 65 L65 15 M65 65 L65 70" />
+    
+    <!-- Letra A -->
+    <path d="M100 65 L115 15 L130 65 M108 45 L122 45" stroke="#4A2C7D" stroke-width="0" />
+    
+    <!-- Letra U -->
+    <path d="M145 15 L145 50 Q145 65 160 65 Q175 65 175 50 L175 15" />
+    
+    <!-- Letra T -->
+    <path d="M190 15 L220 15 M205 15 L205 65" />
+    
+    <!-- Letra A -->
+    <path d="M235 65 L250 15 L265 65 M243 45 L257 45" stroke="#4A2C7D" stroke-width="0" />
+    
+    <!-- Letra N -->
+    <path d="M280 65 L280 15 L295 65 L295 15" />
+    
+    <!-- Letra A -->
+    <path d="M310 65 L325 15 L340 65 M318 45 L332 45" stroke="#4A2C7D" stroke-width="0" />
+  </g>
+</svg>

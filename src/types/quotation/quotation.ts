@@ -34,6 +34,7 @@ export interface Quotation {
   expires_at: string | null;
   response_document_url: string | null;
   internal_notes: string | null;
+  cnc_fixtures: number | null;
 }
 
 // Quotation payload for creating/updating quotations
@@ -69,6 +70,7 @@ export interface QuotationPayload {
   expires_at?: string | null;
   response_document_url?: string | null;
   internal_notes?: string | null;
+  cnc_fixtures?: number | null;
 }
 
 // Quotation with related data
@@ -122,5 +124,6 @@ export interface QuotationFormData {
   validity_days: number | null;
   notes: string | null;
   internal_notes: string | null;
+  cnc_fixtures: number | null;
   status: 'draft' | 'completed';
 } 

@@ -10,7 +10,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Loader2Icon,
-  DownloadIcon
+  DownloadIcon,
+  FileTextIcon,
+  SparklesIcon
 } from "lucide-react";
 
 // Set up PDF.js worker - Force HTTPS
@@ -22,13 +24,15 @@ interface PDFViewerModalProps {
   onOpenChange: (open: boolean) => void;
   pdfUrl: string | null;
   title?: string;
+  isGenerating?: boolean;
 }
 
 export default function PDFViewerModal({
   open,
   onOpenChange,
   pdfUrl,
-  title = "2D Drawing"
+  title = "2D Drawing",
+  isGenerating = false
 }: PDFViewerModalProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -150,37 +154,81 @@ export default function PDFViewerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>PDF viewer for technical drawings</DialogDescription>
         </DialogHeader>
 
-        {/* PDF Content */}
-        <div className="flex-1 overflow-auto bg-gray-100 flex items-center justify-center">
-          {error ? (
-            <div className="text-center max-w-md">
-              <Alert className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+        {/* PDF Generation Loading */}
+        {isGenerating && (
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-0">
+            <div className="text-center p-8 max-w-md">
+              {/* Animated Icons */}
+              <div className="relative mb-6">
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                  <FileTextIcon className="h-8 w-8 text-blue-500 animate-pulse" />
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <SparklesIcon className="h-6 w-6 text-indigo-500 animate-spin" />
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+
+              {/* Loading Text */}
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  URL: {processedPdfUrl}
+                <h3 className="text-lg font-semibold text-gray-800">Generating PDF Document</h3>
+                <p className="text-sm text-gray-600">
+                  Processing your quotation data and creating the PDF file...
                 </p>
-                <div className="flex gap-2">
-                  <Button onClick={handleRetry} variant="outline">
-                    Try Again
-                  </Button>
-                  <Button 
-                    onClick={() => window.open(processedPdfUrl, '_blank')} 
-                    variant="outline"
-                  >
-                    Open in Browser
-                  </Button>
+                <p className="text-xs text-gray-500">
+                  This usually takes a few seconds
+                </p>
+              </div>
+
+              {/* Spinner */}
+              <div className="mt-6">
+                <Loader2Icon className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PDF Content */}
+        {!isGenerating && (
+          <div className="flex-1 overflow-auto bg-gray-100 min-h-0">
+          {error ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="text-center max-w-md">
+                <Alert className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    URL: {processedPdfUrl}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button onClick={handleRetry} variant="outline">
+                      Try Again
+                    </Button>
+                    <Button 
+                      onClick={() => window.open(processedPdfUrl, '_blank')} 
+                      variant="outline"
+                    >
+                      Open in Browser
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           ) : processedPdfUrl ? (
-            <div className="p-4">
+            <div className="flex justify-center p-4">
               <Document
                 key={processedPdfUrl} // Force re-render when URL changes
                 file={processedPdfUrl}
@@ -211,14 +259,18 @@ export default function PDFViewerModal({
               </Document>
             </div>
           ) : (
-            <div className="text-center text-muted-foreground">
-              <p>No PDF URL provided</p>
+            <div className="flex justify-center items-center h-full">
+              <div className="text-center text-muted-foreground">
+                <p>No PDF URL provided</p>
+              </div>
             </div>
           )}
         </div>
+        )}
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between p-4 border-t bg-background">
+        {!isGenerating && (
+          <div className="flex items-center justify-between p-4 border-t bg-background flex-shrink-0">
           <div className="flex items-center gap-4">
             {numPages > 0 && (
               <span className="text-sm text-muted-foreground">
@@ -272,6 +324,7 @@ export default function PDFViewerModal({
             </Button>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

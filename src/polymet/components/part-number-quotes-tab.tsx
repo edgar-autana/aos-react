@@ -12,8 +12,7 @@ import {
   DollarSignIcon,
   ClockIcon,
   BuildingIcon,
-  PackageIcon,
-  Calculator
+  PackageIcon
 } from 'lucide-react';
 import {
   Tooltip,
@@ -24,7 +23,6 @@ import {
 import { useQuotationsWithDetails } from '@/hooks/quotation/useQuotations';
 import { QuotationWithDetails } from '@/types/quotation/quotation';
 import QuotationFormModal from './quotation-form-modal';
-import SmartQuotationModal from './smart-quotation-modal';
 
 interface PartNumberQuotesTabProps {
   partNumberId: string;
@@ -52,7 +50,6 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
   const [editingQuotation, setEditingQuotation] = useState<QuotationWithDetails | null>(null);
   const [creatingVersionFrom, setCreatingVersionFrom] = useState<QuotationWithDetails | null>(null);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
-  const [isSmartQuotationOpen, setIsSmartQuotationOpen] = useState(false);
 
   // Auto-open edit modal for specific quotation if initialQuotationId is provided
   React.useEffect(() => {
@@ -177,25 +174,12 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
             Manage quotes and versions for this part number
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setIsSmartQuotationOpen(true)}
-            variant="default"
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Calculator className="h-4 w-4 mr-2" />
-            Smart Quotation
+        {quotations.length === 0 && (
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Generate Quote
           </Button>
-          {quotations.length === 0 && (
-            <Button 
-              onClick={() => setIsCreateModalOpen(true)}
-              variant="outline"
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Generate Quote
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Quotations List */}
@@ -289,13 +273,13 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setIsSmartQuotationOpen(true)}
+                                  onClick={() => handleCreateVersion(group.rootQuotation)}
                                 >
-                                  <Calculator className="h-4 w-4" />
+                                  <PlusIcon className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Create Smart Quotation</p>
+                                <p>Create new version</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -368,13 +352,13 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => setIsSmartQuotationOpen(true)}
+                                      onClick={() => handleCreateVersion(version)}
                                     >
-                                      <Calculator className="h-4 w-4" />
+                                      <PlusIcon className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Create Smart Quotation</p>
+                                    <p>Create new version</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -432,17 +416,6 @@ export default function PartNumberQuotesTab({ partNumberId, partNumber, companyI
         />
       )}
 
-      {/* Smart Quotation Modal */}
-      <SmartQuotationModal
-        isOpen={isSmartQuotationOpen}
-        onClose={() => {
-          setIsSmartQuotationOpen(false);
-          refetch();
-        }}
-        partNumber={partNumber}
-        rfqId={rfqInfo?.id}
-        companyId={companyInfo?.id}
-      />
     </div>
   );
 } 

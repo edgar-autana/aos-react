@@ -12,12 +12,16 @@ import {
   DollarSignIcon,
   EyeIcon,
   ExternalLinkIcon,
-  BuildingIcon
+  BuildingIcon,
+  FileDownIcon
 } from 'lucide-react';
 import { useGlobalQuotationsByRfq } from '@/hooks/global-quotation/useGlobalQuotations';
 import { GlobalQuotation } from '@/types/global-quotation/globalQuotation';
 import { GlobalQuotationWithDetails } from '@/types/global-quotation/globalQuotation';
 import { formatNumber, formatCurrency } from '@/utils/numberUtils';
+import CreateGlobalQuotationModal from './create-global-quotation-modal';
+import PDFViewerModal from './pdf-viewer/pdf-viewer-modal';
+import { useToast } from '@/components/ui/use-toast';
 
 interface RfqGlobalQuotationsTabProps {
   rfqId: string;
@@ -25,9 +29,15 @@ interface RfqGlobalQuotationsTabProps {
 
 export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTabProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { globalQuotations, loading, error, refetch } = useGlobalQuotationsByRfq(rfqId);
   const [selectedGlobalQuotation, setSelectedGlobalQuotation] = useState<GlobalQuotationWithDetails | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
+  const [currentPdfTitle, setCurrentPdfTitle] = useState<string>('');
 
   // Get status color
   const getStatusColor = (status: string): string => {
@@ -76,6 +86,177 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
     window.open(url, '_blank');
   };
 
+  // Handle PDF generation or viewing
+  const handlePDFAction = async (globalQuotation: GlobalQuotation) => {
+    // If PDF URL already exists, open the modal directly
+    if (globalQuotation.pdf_url) {
+      setCurrentPdfUrl(globalQuotation.pdf_url);
+      setCurrentPdfTitle(`Global Quotation: ${globalQuotation.name}`);
+      setIsPdfModalOpen(true);
+      return;
+    }
+
+    // If no PDF URL exists, generate PDF first
+    try {
+      setGeneratingPdfId(globalQuotation.id);
+      setCurrentPdfTitle(`Global Quotation: ${globalQuotation.name}`);
+      setCurrentPdfUrl(null);
+      setIsPdfModalOpen(true); // Open modal in loading state
+      
+      // First get the full details
+      const { globalQuotationApi } = await import('@/services/global-quotation/globalQuotationApi');
+      const detailsResponse = await globalQuotationApi.getByIdWithDetails(globalQuotation.id);
+      
+      if (detailsResponse.error || !detailsResponse.data) {
+        throw new Error(detailsResponse.error || 'Failed to fetch quotation details');
+      }
+
+      const globalQuotationDetails = detailsResponse.data;
+
+      // Debug: Log the full structure
+      console.log('🔍 Full globalQuotationDetails:', globalQuotationDetails);
+      console.log('🔍 part_numbers structure:', globalQuotationDetails.part_numbers);
+
+      // Prepare data for PDF generation
+      const pdfData = {
+        // Customer Info
+        customer_name: 'Contact Person',
+        company_name: globalQuotationDetails.company?.name || '',
+        company_phone: 'Phone not available',
+        company_address: 'Address not available',
+        
+        // Quote Info
+        quote_number: globalQuotationDetails.quote_number || globalQuotation.name,
+        opp_name: globalQuotationDetails.rfq_info?.name || 'RFQ',
+        quote_date: new Date(globalQuotationDetails.created_at).toLocaleDateString(),
+        prepared_by: globalQuotationDetails.created_by || 'AUTANA',
+        exchange_rate: '19.50',
+        
+        // Quotations array - use the part_numbers structure from the query
+        quotations: (globalQuotationDetails.part_numbers || [])?.map((item, index) => {
+          // Debug logging
+          console.log('🔍 Item Data:', {
+            partNumber: item.part_number?.drawing_number,
+            partName: item.part_number?.part_name,
+            mainProcess: item.part_number?.main_process,
+            quotationMoq1: item.quotation?.moq1,
+            quotationCncFixtures: item.quotation?.cnc_fixtures,
+            unitPrice: item.quotation?.unit_price
+          });
+          
+          // Get values directly from database fields
+          const cncFixturesValue = item.quotation?.cnc_fixtures || 0;
+          const moqValue = item.quotation?.moq1 || 0;
+          
+          // For freight, we'll extract from notes since there's no specific field yet
+          const freightMatch = item.quotation?.notes?.match(/Freight: ([\d.]+)/);
+          const freightValue = freightMatch ? parseFloat(freightMatch[1]) : 0;
+          
+          console.log('📋 Final Values:', {
+            cncFixturesValue,
+            freightValue,
+            moqValue
+          });
+          
+          return {
+            index_quotation: index + 1,
+            part_number: item.part_number?.drawing_number || 'N/A',
+            part_name: item.part_number?.part_name || 'Unknown Part',
+            main_process_name: item.part_number?.main_process || 'N/A',
+            estimated_anual_units: item.part_number?.estimated_anual_units || 0,
+            moq_1: moqValue,
+            total_cost_per_pieces_formatted: `$${(item.quotation?.unit_price || 0).toFixed(2)}`,
+            freight_per_piece_formatted: `$${freightValue.toFixed(2)}`,
+            total_piece_price_ddp_formated: `$${((item.quotation?.unit_price || 0) + freightValue).toFixed(2)}`,
+            is_ddp: true,
+            is_not_shipping: false,
+            cnc_fixtures: `$${cncFixturesValue.toFixed(2)}`,
+            has_tooling: false,
+            has_trim_die: false
+          };
+        }) || [],
+        
+        // Additional fields
+        notes: globalQuotationDetails.description || '',
+        has_tooling: false,
+        has_trim_die: false,
+        
+        // Terms
+        tooling: '4-6 weeks after PO and design approval',
+        fair_ppap_samples: '2-3 weeks after tooling completion',
+        samples_shipping: 'Via express courier (DHL/FedEx)',
+        moq: 'As specified per part',
+        shipping: 'FOB or DDP as requested',
+        payment_tooling: '50% advance, 50% upon approval',
+        payment_components: 'Net 30 days',
+        incoterms: 'DDP Customer facility',
+        packaging_message: 'Standard industrial packaging unless otherwise specified',
+        
+        // Contact info
+        full_name: 'AUTANA Sales Team',
+        position: 'Sales Department',
+        email: 'sales@autana.com',
+        phone: '+1 (555) 123-4567'
+      };
+
+      // Call PDF generation API
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/api/v1/pdf-generation/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          template_type: 'custom',
+          data: pdfData,
+          filename: `global_quote_${globalQuotation.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+          options: {
+            template_name: 'global_quotation'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to generate PDF');
+      }
+
+      const result = await response.json();
+      
+      if (result.pdf_url) {
+        // Save PDF URL to database
+        const updateResponse = await globalQuotationApi.updatePdfUrl(globalQuotation.id, result.pdf_url);
+        
+        if (updateResponse.error) {
+          console.warn('Failed to save PDF URL to database:', updateResponse.error);
+        }
+
+        // Update the modal with the generated PDF
+        setCurrentPdfUrl(result.pdf_url);
+        
+        // Refresh the quotations list to show updated data
+        refetch();
+        
+        toast({
+          title: "✅ PDF Generated!",
+          description: "The quotation PDF has been generated successfully.",
+        });
+      } else {
+        throw new Error('No PDF URL returned');
+      }
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setIsPdfModalOpen(false); // Close modal on error
+      toast({
+        variant: "destructive",
+        title: "❌ Error",
+        description: error instanceof Error ? error.message : 'Failed to generate PDF',
+      });
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
   if (loading) {
     return <PageLoading />;
   }
@@ -102,6 +283,12 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
             View and manage global quotations created from this RFQ's part numbers
           </p>
         </div>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          + Create Global Quotation
+        </Button>
       </div>
 
       {/* Statistics */}
@@ -206,6 +393,15 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
                       >
                         <EyeIcon className="h-4 w-4 mr-2" />
                         View Details
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePDFAction(globalQuotation)}
+                        disabled={generatingPdfId === globalQuotation.id}
+                      >
+                        <FileDownIcon className="h-4 w-4 mr-2" />
+                        {generatingPdfId === globalQuotation.id ? 'Generating...' : 'PDF'}
                       </Button>
                     </div>
                   </div>
@@ -395,6 +591,53 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Global Quotation Modal */}
+      <CreateGlobalQuotationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        rfqId={rfqId}
+        onSuccess={async (globalQuotationId) => {
+          // Close the create modal first
+          setIsCreateModalOpen(false);
+          
+          // If a new quotation was created, generate and show PDF
+          if (globalQuotationId) {
+            // Add a small delay to ensure the create modal is fully closed
+            setTimeout(async () => {
+              try {
+                // Get the fresh quotation data
+                const { globalQuotationApi } = await import('@/services/global-quotation/globalQuotationApi');
+                const response = await globalQuotationApi.getById(globalQuotationId);
+                
+                if (response.data) {
+                  // Refetch list to show updated data
+                  await refetch();
+                  
+                  // Generate and show PDF in modal
+                  await handlePDFAction(response.data);
+                }
+              } catch (error) {
+                console.error('Error loading new quotation:', error);
+                // Still refetch even if PDF generation fails
+                refetch();
+              }
+            }, 300); // 300ms delay to ensure smooth transition
+          } else {
+            // Just refetch if no ID provided
+            refetch();
+          }
+        }}
+      />
+
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        open={isPdfModalOpen}
+        onOpenChange={setIsPdfModalOpen}
+        pdfUrl={currentPdfUrl}
+        title={currentPdfTitle}
+        isGenerating={generatingPdfId !== null}
+      />
     </div>
   );
 }

@@ -154,12 +154,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <MenuIcon className="h-5 w-5" />
             </Button>
             <Link to="/" className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
+              {/* AUTANA Logo */}
+              <img 
+                src="/logo/logo.png" 
+                alt="AUTANA" 
+                className="h-10 w-auto"
+              />
+              <div className="border-l pl-3 ml-2">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">CNC Order Tracker</p>
               </div>
-              <span className="font-bold text-xl">
-                CNC Order Tracker
-              </span>
             </Link>
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -197,10 +200,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
         >
           <div className="h-16 border-b flex items-center justify-between px-4 md:hidden">
             <Link to="/" className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <FactoryIcon className="h-5 w-5 text-primary-foreground" />
+              {/* AUTANA Logo */}
+              <img 
+                src="/logo/logo.png" 
+                alt="AUTANA" 
+                className="h-10 w-auto"
+              />
+              <div className="border-l pl-3 ml-2">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">CNC Order Tracker</p>
               </div>
-              <span className="font-bold text-xl">CNC Order Tracker</span>
             </Link>
             <Button
               variant="ghost"

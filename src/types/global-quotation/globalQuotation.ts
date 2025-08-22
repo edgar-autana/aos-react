@@ -7,6 +7,7 @@ export interface GlobalQuotation {
   description: string | null;
   status: 'draft' | 'sent' | 'accepted' | 'rejected';
   total_value: number | null;
+  pdf_url: string | null; // PDF URL field for generated quotation PDFs
   created_at: string;
   created_by: string | null;
   sent_at: string | null;
@@ -24,6 +25,7 @@ export interface GlobalQuotationPayload {
   description?: string | null;
   status?: 'draft' | 'sent' | 'accepted' | 'rejected';
   total_value?: number | null;
+  pdf_url?: string | null; // PDF URL field for generated quotation PDFs
   created_by?: string | null;
   sent_at?: string | null;
   accepted_at?: string | null;
