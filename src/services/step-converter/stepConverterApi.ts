@@ -11,14 +11,9 @@ export const stepConverterApi = {
   // Convert STEP file to URN for 3D viewer
   async convertStepToUrn(fileUrl: string): Promise<StepConverterResponse> {
     try {
-      console.log('🔄 Converting STEP to URN for file:', fileUrl);
-      console.log('🔄 Using AOS API base URL:', AOS_API_BASE_URL);
       
       // Log file URL details for debugging
       const url = new URL(fileUrl);
-      console.log('🔄 File URL host:', url.host);
-      console.log('🔄 File URL pathname:', url.pathname);
-      console.log('🔄 File URL timestamp:', Date.now());
       
       const requestBody = {
         file_url: fileUrl,
@@ -31,7 +26,6 @@ export const stepConverterApi = {
         ]
       };
       
-      console.log('🔄 Sending request body:', JSON.stringify(requestBody, null, 2));
       
       const response = await fetch(`${AOS_API_BASE_URL}/api/v1/autodesk/upload-step`, {
         method: 'POST',
@@ -42,7 +36,6 @@ export const stepConverterApi = {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('🔄 Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -53,10 +46,8 @@ export const stepConverterApi = {
       }
 
       const data = await response.json();
-      console.log('✅ STEP conversion response:', JSON.stringify(data, null, 2));
 
       if (data.success && data.urn) {
-        console.log('✅ Conversion successful, URN:', data.urn);
         return {
           success: true,
           urn: data.urn,

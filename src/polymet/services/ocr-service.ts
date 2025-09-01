@@ -17,9 +17,6 @@ export class OCRService {
   private static readonly API_URL = 'https://apipro1.ocr.space/parse/image';
 
   static async extractText(fileUrl: string): Promise<OCRResult> {
-    console.log('🔍 OCR Service - API Key:', this.API_KEY ? 'Set' : 'Not set');
-    console.log('🔍 OCR Service - API Key length:', this.API_KEY?.length || 0);
-    
     if (!this.API_KEY) {
       throw new Error('OCR API key not configured. Please set VITE_OCR_KEY in your .env file.');
     }
@@ -35,26 +32,19 @@ export class OCRService {
       formData.append('scale', 'true');
       formData.append('OCREngine', '2'); // More accurate engine
 
-      console.log('🔍 OCR Service - Making request to:', this.API_URL);
-      console.log('🔍 OCR Service - Using API key:', this.API_KEY);
-      
       const response = await fetch(this.API_URL, {
         method: 'POST',
         body: formData,
       });
 
-      console.log('🔍 OCR Service - Response status:', response.status);
       
       if (!response.ok) {
-        console.log('🔍 OCR Service - Response error:', await response.text());
         throw new Error(`OCR API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('🔍 OCR Service - Response data:', data);
 
       if (data.IsErroredOnProcessing) {
-        console.log('🔍 OCR Service - OCR processing error:', data.ErrorMessage);
         throw new Error(data.ErrorMessage || 'OCR processing failed');
       }
 

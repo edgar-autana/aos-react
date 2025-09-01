@@ -46,8 +46,6 @@ interface PageData {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('🔍 OCR API - API Key:', OCR_API_KEY ? 'Set' : 'Not set');
-  console.log('🔍 OCR API - API Key length:', OCR_API_KEY?.length || 0);
   
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -63,8 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!fileUrl) {
       return res.status(400).json({ error: 'fileUrl is required' });
     }
-
-    console.log(`🚀 Processing OCR for: ${fileUrl}`);
 
     // Prepare OCR.space API payload
     const payload = {

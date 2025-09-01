@@ -1,10 +1,5 @@
 const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
 
-// Log the API URL for debugging
-if (import.meta.env.DEV) {
-  console.log('API Base URL:', API_BASE_URL);
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
-}
 
 export interface Message {
   id: string;

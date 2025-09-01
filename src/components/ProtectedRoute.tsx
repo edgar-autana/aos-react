@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { ArrowLeftIcon, LockIcon } from "lucide-react";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions } from "@/hooks/usePermissionsReal";
 
 type PermissionType = string | string[];
 

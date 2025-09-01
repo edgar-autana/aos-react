@@ -102,7 +102,6 @@ export default function PartNumberCreateForm({
         }
 
         setCompanyId(rfqCompanyId);
-        console.log('Found company ID for RFQ:', rfqCompanyId);
         
       } catch (error) {
         console.error('Exception fetching RFQ:', error);
@@ -176,8 +175,6 @@ export default function PartNumberCreateForm({
       };
 
       // Debug logging
-      console.log('Sending part number payload:', partNumberPayload);
-      console.log('Company ID from RFQ:', companyId);
 
       // Save to database
       const response = await partNumberApi.create(partNumberPayload);

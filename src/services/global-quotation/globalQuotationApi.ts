@@ -189,7 +189,6 @@ export const globalQuotationApi = {
   // Create new global quotation
   async create(globalQuotation: GlobalQuotationPayload): Promise<ApiResponse<GlobalQuotation>> {
     try {
-      console.log('Creating global quotation with payload:', globalQuotation);
       
       const { data, error } = await supabase
         .from('tb_global_quotation')

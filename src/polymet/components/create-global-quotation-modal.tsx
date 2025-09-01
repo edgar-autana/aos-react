@@ -240,20 +240,6 @@ export default function CreateGlobalQuotationModal({
         companyId = rfqData.company;
       }
 
-      console.log('Creating global quotation with correct schema:', {
-        quote_number: quoteDetails.quoteNumber,
-        name: quotationName.trim(),
-        company_id: companyId,
-        rfq: rfqId,
-        contact_person_id: contactPersonId,
-        quote_date: quoteDetails.quoteDate,
-        prepared_by: quoteDetails.preparedBy,
-        validity_days: quoteDetails.validityDays,
-        exchange_rate: quoteDetails.exchangeRate,
-        currency: quoteDetails.currency,
-        total_value: calculateTotalValue(),
-        selectedItems: lineItems.filter(item => item.isSelected)
-      });
 
       // Step 1: Create the Global Quotation using correct schema
       const globalQuotationPayload = {
@@ -281,14 +267,12 @@ export default function CreateGlobalQuotationModal({
       }
 
       const newGlobalQuotationId = createResponse.data.id;
-      console.log('✅ Global Quotation created:', createResponse.data);
 
       // Step 2: Create preliminary quotations without supplier and add to bridge table
       const selectedItems = lineItems.filter(item => item.isSelected);
       
       for (const lineItem of selectedItems) {
         try {
-          console.log('Creating preliminary quotation for part:', lineItem.partNumber);
           
           // First, create individual quotation record (tb_quotation) without supplier (preliminary)
           const quotationPayload = {
@@ -314,7 +298,6 @@ export default function CreateGlobalQuotationModal({
           }
 
           const newQuotationId = quotationResponse.data.id;
-          console.log('✅ Created preliminary quotation:', newQuotationId, 'for part:', lineItem.partNumber);
 
           // Now add to bridge table with the quotation_id
           const addPartResponse = await addPartNumberToGlobalQuotation(
@@ -326,7 +309,6 @@ export default function CreateGlobalQuotationModal({
           if (addPartResponse.error) {
             console.warn('⚠️ Warning linking part number:', lineItem.partNumber, addPartResponse.error);
           } else {
-            console.log('✅ Linked part to global quotation:', lineItem.partNumber);
           }
           
         } catch (itemError) {
@@ -334,7 +316,6 @@ export default function CreateGlobalQuotationModal({
         }
       }
 
-      console.log('✅ Added', selectedItems.length, 'parts to global quotation');
 
       // Success feedback
       toast({

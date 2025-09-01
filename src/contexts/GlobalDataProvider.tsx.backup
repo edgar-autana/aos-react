@@ -1,0 +1,300 @@
+/**
+ * GLOBAL DATA PROVIDER - Single Source of Truth
+ * Loads ALL data at app startup and provides it through context
+ * Nothing renders until ALL data is loaded
+ */
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
+import { useOrganizationsDirect } from '@/hooks/organization/useOrganizationsDirect';
+import { subscriptionApi } from '@/services/subscription/subscriptionApi';
+import type { 
+  Organization, 
+  UserOrganizationContext 
+} from '@/types/organization/organization';
+import type { 
+  SubscriptionPlan, 
+  UserSubscription 
+} from '@/types/subscription/subscription';
+
+export interface EnvironmentInfo {
+  environment: string;
+  status: string;
+  description: string;
+  color: string;
+  database: string;
+  show_banner: boolean;
+}
+
+interface GlobalDataContextType {
+  // Organization data
+  organizations: Organization[];
+  selectedOrganization: Organization | null;
+  userContext: UserOrganizationContext | null;
+  
+  // Subscription data
+  plans: SubscriptionPlan[];
+  userSubscription: UserSubscription | null;
+  currentPlan: SubscriptionPlan | null;
+  usage: { organizations_count: number; ai_requests_used: number } | null;
+  
+  // Environment data
+  envInfo: EnvironmentInfo | null;
+  
+  // Loading state - controls entire app
+  isReady: boolean;
+  error: string | null;
+  
+  // Computed values
+  hasOrganizations: boolean;
+  hasActiveSubscription: boolean;
+  canUpgradePlan: boolean;
+  canCreateOrganization: boolean;
+  
+  // Helper functions
+  getOrganizationLimitText: () => string;
+  
+  // Actions
+  refreshData: () => Promise<void>;
+}
+
+const GlobalDataContext = createContext<GlobalDataContextType | null>(null);
+
+export function GlobalDataProvider({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, getToken } = useAuth();
+  
+  // Use direct Supabase organization hook
+  const {
+    organizations,
+    selectedOrganization,
+    userContext,
+    isLoading: orgLoading,
+    error: orgError,
+    hasOrganizations
+  } = useOrganizationsDirect();
+  
+  // Subscription and environment state
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null);
+  const [usage, setUsage] = useState<{ organizations_count: number; ai_requests_used: number } | null>(null);
+  const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
+  
+  // Global loading state - blocks entire app
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Load ALL data once at startup
+  const loadAllData = async () => {
+    if (!isSignedIn) {
+      // If not signed in, only load environment and plans
+      await loadEnvironmentData();
+      await loadPublicPlans();
+      setIsReady(true);
+      return;
+    }
+
+    try {
+      setError(null);
+
+      // Setup auth token first
+      const token = await getToken();
+      if (token) {
+        localStorage.setItem('clerk-token', token);
+      }
+
+      // Load ALL data in parallel - single session
+      const [
+        envResult,
+        userContextResult, 
+        subscriptionResult, 
+        plansResult
+      ] = await Promise.allSettled([
+        loadEnvironmentData(),
+        organizationApi.getUserContext(),
+        subscriptionApi.getMySubscription(),
+        subscriptionApi.getPlans()
+      ]);
+
+      // Process environment data
+      if (envResult.status === 'fulfilled') {
+        console.log('✅ Environment data loaded');
+      } else {
+        console.warn('⚠️ Environment data failed:', envResult.reason);
+      }
+
+      // Process organization data
+      if (userContextResult.status === 'fulfilled') {
+        const userContextData = userContextResult.value;
+        console.log('🔍 DEBUG: Raw userContextData:', userContextData);
+        console.log('🔍 DEBUG: Organizations array:', userContextData.organizations);
+        console.log('🔍 DEBUG: Organizations count:', userContextData.organizations?.length || 0);
+        
+        setOrganizations(userContextData.organizations || []);
+        setUserContext(userContextData);
+        
+        // Set selected organization
+        const selected = userContextData.current_organization_id 
+          ? userContextData.organizations?.find(org => org.id === userContextData.current_organization_id)
+          : userContextData.organizations?.[0] || null;
+        setSelectedOrganization(selected);
+        
+        console.log('✅ Organizations loaded:', userContextData.organizations?.length || 0);
+        console.log('🔍 DEBUG: Selected organization:', selected);
+      } else {
+        console.error('❌ Organizations failed:', userContextResult.reason);
+        console.error('🔍 DEBUG: Full error:', userContextResult);
+        setOrganizations([]);
+      }
+
+      // Process subscription data
+      if (subscriptionResult.status === 'fulfilled' && subscriptionResult.value.success) {
+        const subData = subscriptionResult.value;
+        setUserSubscription(subData.subscription);
+        setCurrentPlan(subData.plan);
+        setUsage(subData.usage);
+        console.log('✅ Subscription data loaded:', subData.subscription?.status);
+      } else {
+        console.warn('⚠️ Subscription failed:', subscriptionResult.status === 'rejected' ? subscriptionResult.reason : 'No success');
+      }
+
+      // Process plans data
+      if (plansResult.status === 'fulfilled') {
+        setPlans(plansResult.value || []);
+        console.log('✅ Plans loaded:', plansResult.value?.length || 0);
+      } else {
+        console.warn('⚠️ Plans failed:', plansResult.reason);
+        setPlans([]);
+      }
+      
+      console.log('🎉 GLOBAL DATA LOAD COMPLETE - App ready!');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load app data';
+      setError(errorMessage);
+      console.error('💥 Global data load failed:', error);
+    } finally {
+      setIsReady(true);
+    }
+  };
+
+  // Load environment data
+  const loadEnvironmentData = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+      const response = await fetch(`${apiUrl}/environment`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEnvInfo(data);
+        return data;
+      } else {
+        // Fallback
+        const frontendEnv = import.meta.env.VITE_ENVIRONMENT;
+        const fallbackData = {
+          environment: frontendEnv || 'DEVELOPMENT',
+          status: frontendEnv === 'STAGING' ? '🚧 STAGING' : '🔧 DEVELOPMENT',
+          description: 'Frontend fallback',
+          color: frontendEnv === 'STAGING' ? 'yellow' : 'blue',
+          database: 'Frontend Config',
+          show_banner: frontendEnv === 'STAGING'
+        };
+        setEnvInfo(fallbackData);
+        return fallbackData;
+      }
+    } catch (error) {
+      console.warn('Environment load failed:', error);
+      const fallbackData = {
+        environment: 'DEVELOPMENT',
+        status: '🔧 DEVELOPMENT',
+        description: 'Fallback mode',
+        color: 'blue',
+        database: 'Frontend Config',
+        show_banner: false
+      };
+      setEnvInfo(fallbackData);
+      return fallbackData;
+    }
+  };
+
+  // Load public plans (for non-authenticated users)
+  const loadPublicPlans = async () => {
+    try {
+      const plansData = await subscriptionApi.getPlans();
+      setPlans(plansData || []);
+    } catch (error) {
+      console.warn('Public plans load failed:', error);
+      setPlans([]);
+    }
+  };
+
+  // Initialize data when auth state changes
+  useEffect(() => {
+    loadAllData();
+  }, [isSignedIn]);
+
+  // Computed values
+  const hasActiveSubscription = userSubscription?.status === 'active' && currentPlan !== null;
+  const canUpgradePlan = currentPlan && plans.length > 0 
+    ? plans.some(plan => plan.tier > currentPlan.tier)
+    : false;
+  const canCreateOrganization = currentPlan && hasOrganizations
+    ? organizations.length < currentPlan.max_organizations
+    : false;
+
+  const getOrganizationLimitText = () => {
+    if (!currentPlan) return '';
+    return `${organizations.length} / ${currentPlan.max_organizations} organizations`;
+  };
+
+  const refreshData = async () => {
+    setIsReady(false);
+    await loadAllData();
+  };
+
+  const value: GlobalDataContextType = {
+    // Organization data
+    organizations,
+    selectedOrganization,
+    userContext,
+    
+    // Subscription data
+    plans,
+    userSubscription,
+    currentPlan,
+    usage,
+    
+    // Environment data
+    envInfo,
+    
+    // Loading state
+    isReady,
+    error,
+    
+    // Computed values
+    hasOrganizations,
+    hasActiveSubscription,
+    canUpgradePlan,
+    canCreateOrganization,
+    
+    // Helper functions
+    getOrganizationLimitText,
+    
+    // Actions
+    refreshData
+  };
+
+  return (
+    <GlobalDataContext.Provider value={value}>
+      {children}
+    </GlobalDataContext.Provider>
+  );
+}
+
+export function useGlobalData() {
+  const context = useContext(GlobalDataContext);
+  if (!context) {
+    throw new Error('useGlobalData must be used within GlobalDataProvider');
+  }
+  return context;
+}

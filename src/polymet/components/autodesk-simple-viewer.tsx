@@ -26,7 +26,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   const checkModelStatus = async (modelUrn: string): Promise<boolean> => {
     try {
       const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
-      console.log('Checking model status for URN:', modelUrn);
       
       const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/translate/${modelUrn}`);
       
@@ -35,13 +34,10 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
       }
       
       const data = await response.json();
-      console.log('Model status:', data);
       
       if (data.status === 'success' && data.progress === 100) {
-        console.log('Model is ready for viewing');
         return true;
       } else {
-        console.log('Model is not ready, status:', data.status, 'progress:', data.progress);
         return false;
       }
     } catch (error) {
@@ -54,7 +50,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   const processModel = async (modelUrn: string): Promise<boolean> => {
     try {
       const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
-      console.log('Processing model for URN:', modelUrn);
       setStatus('Processing model...');
       
       const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/translate`, {
@@ -73,7 +68,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
       }
       
       const data = await response.json();
-      console.log('Model processing started:', data);
       
       // Poll for completion
       return await pollModelStatus(modelUrn);
@@ -95,10 +89,8 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Poll attempt', attempts + 1, 'status:', data.status, 'progress:', data.progress);
           
           if (data.status === 'success' && data.progress === 100) {
-            console.log('Model processing completed');
             setStatus('Model ready!');
             return true;
           } else if (data.status === 'failed') {
@@ -115,7 +107,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
           setStatus(`${message}... ${progress}%`);
           
           // Log detallado del progreso
-          console.log(`Progress: ${progress}% - Stage: ${stage} - Message: ${message}`);
         }
         
         attempts++;
@@ -136,7 +127,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   const getAccessToken = async (callback: (token: string, expires: number) => void) => {
     try {
       const aosApiBaseUrl = import.meta.env.VITE_AOS_API_BASE_URL || 'http://localhost:8001';
-      console.log('Requesting access token from:', aosApiBaseUrl);
       
       const response = await fetch(`${aosApiBaseUrl}/api/v1/autodesk/forge/token`);
       
@@ -181,25 +171,20 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
 
   // Función para cargar el modelo
   const loadModel = (viewer: any, modelUrn: string, accessToken: string) => {
-    console.log('Loading model with URN:', modelUrn);
     
     // Construir el URN completo con prefijo
     const fullUrn = `urn:${modelUrn}`;
-    console.log('Full URN:', fullUrn);
     
     // Usar el método Document.load estándar
     window.Autodesk.Viewing.Document.load(fullUrn, (doc: any) => {
-      console.log('Document loaded successfully:', doc);
       
       // Obtener los viewables del documento
       const viewables = doc.getRoot().getDefaultGeometry();
-      console.log('Default viewables:', viewables);
       
       if (viewables) {
         // Cargar el modelo en el visor
         viewer.loadDocumentNode(doc, viewables).then(() => {
-          console.log('Model loaded successfully');
-          setIsLoading(false);
+            setIsLoading(false);
           onLoad?.();
           // Ajustar la vista al modelo
           viewer.fitToView();
@@ -270,18 +255,15 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
         .then(response => response.json())
         .then(data => {
           const accessToken = data.access_token;
-          console.log('Access token received, initializing viewer');
           setStatus('Initializing viewer...');
           
           const options = {
             accessToken: accessToken
           };
 
-          console.log('Initializing Autodesk Viewer with URN:', urn);
 
           // Inicializar Autodesk Viewing
           window.Autodesk.Viewing.Initializer(options, () => {
-            console.log('Autodesk Viewer initialized successfully');
             
             // Crear el visor
             const viewer = new window.Autodesk.Viewing.GuiViewer3D(viewerRef.current, {
@@ -328,7 +310,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
   useEffect(() => {
     // Evitar inicialización múltiple
     if (viewerInstance.current) {
-      console.log('Viewer already initialized, skipping...');
       return;
     }
 
@@ -337,7 +318,6 @@ export default function AutodeskSimpleViewer({ urn, onLoad, onError }: AutodeskS
     // Cleanup al desmontar el componente
     return () => {
       if (viewerInstance.current) {
-        console.log('Cleaning up viewer...');
         viewerInstance.current.finish();
         viewerInstance.current = null;
       }

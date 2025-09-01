@@ -114,7 +114,6 @@ export default function ThreeDViewerModal({
                          <AutodeskSimpleViewer
                            urn={urn}
                            onLoad={() => {
-                             console.log('3D viewer loaded successfully');
                              toast({
                                title: "3D Viewer Ready",
                                description: "Your 3D model is now loaded",

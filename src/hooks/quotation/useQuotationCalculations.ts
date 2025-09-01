@@ -88,21 +88,6 @@ export function useQuotationCalculations(data: QuotationCalculationData) {
     const rmWeightPercentage = total > 0 ? calculateWeightPercentage(rmPiecePrice, total) : null;
     const cncWeightPercentage = total > 0 ? calculateWeightPercentage(cncWithScrap, total) : null;
 
-    // Debug logging (remove in production)
-    console.log('Calculation Debug:', {
-      cost_of_plate: data.cost_of_plate,
-      rm_cnc_margin: data.rm_cnc_margin,
-      rm_cnc_scrap: data.rm_cnc_scrap,
-      machine_cost_per_hour: data.machine_cost_per_hour,
-      cycle_time_sec: data.cycle_time_sec,
-      rmPiecePrice,
-      cncNoScrap,
-      cncScrapCost,
-      cncWithScrap,
-      total,
-      rmWeightPercentage,
-      cncWeightPercentage
-    });
 
     setCalculations({
       rm_cnc_piece_price: rmPiecePrice,

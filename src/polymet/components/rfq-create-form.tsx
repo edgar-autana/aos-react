@@ -62,7 +62,6 @@ export default function RfqCreateForm({ customerId, onSuccess, onCancel }: RfqCr
 
   const onSubmit = async (data: RFQPayload) => {
     try {
-      console.log('Creating RFQ with data:', data);
       
       // Format data properly - convert empty strings to null for UUID fields (database requirement)
       const formattedData = {
@@ -75,11 +74,9 @@ export default function RfqCreateForm({ customerId, onSuccess, onCancel }: RfqCr
         autana_canceled_rfq: false, // Set default value
       } as any; // Use any to handle the null vs undefined TypeScript mismatch
 
-      console.log('Formatted data for API:', formattedData);
 
       const response = await rfqApi.create(formattedData);
       
-      console.log('API response:', response);
       
       if (response.error) {
         toast({

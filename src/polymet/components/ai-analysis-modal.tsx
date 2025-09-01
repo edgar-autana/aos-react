@@ -33,39 +33,15 @@ export default function AIAnalysisModal({
   // const hasRefreshedRef = useRef(false); // DISABLED since refresh is disabled
 
   const handleClose = useCallback(() => {
-    console.log('🔄 AIAnalysisModal handleClose called');
     setIsClosing(true);
     setTimeout(() => {
-      console.log('🔄 AIAnalysisModal calling onClose');
       onClose();
       setIsClosing(false);
     }, 150);
   }, [onClose]);
 
-  // Refresh part number data when modal opens - DISABLED to prevent infinite loop
-  // useEffect(() => {
-  //   console.log('🔍 AIAnalysisModal useEffect - isOpen:', isOpen, 'hasRefreshed:', hasRefreshedRef.current, 'onPartNumberUpdate exists:', !!onPartNumberUpdate);
-  //   if (isOpen && onPartNumberUpdate && !hasRefreshedRef.current) {
-  //     console.log('🔄 AIAnalysisModal calling onPartNumberUpdate');
-  //     // Call the callback immediately to refresh part number data
-  //     onPartNumberUpdate();
-  //     hasRefreshedRef.current = true;
-  //     console.log('✅ AIAnalysisModal set hasRefreshed to true');
-  //   }
-  // }, [isOpen, onPartNumberUpdate]); // Include onPartNumberUpdate to ensure it's stable
-
-  // Reset refresh flag when modal closes - DISABLED since refresh is disabled
-  // useEffect(() => {
-  //   console.log('🔄 AIAnalysisModal reset useEffect - isOpen:', isOpen);
-  //   if (!isOpen) {
-  //     hasRefreshedRef.current = false;
-  //     console.log('✅ AIAnalysisModal reset hasRefreshed to false');
-  //   }
-  // }, [isOpen]);
-
   // Update refreshed part number when prop changes
   useEffect(() => {
-    console.log('🔄 AIAnalysisModal partNumber useEffect - partNumber.id:', partNumber.id, 'partNumber.part_drawing_2d:', !!partNumber.part_drawing_2d);
     setRefreshedPartNumber(partNumber);
     // Reset to original document when part number changes
     setCurrentDocumentUrl(partNumber.part_drawing_2d);
@@ -73,14 +49,12 @@ export default function AIAnalysisModal({
 
   // Load conversation history when modal opens
   useEffect(() => {
-    console.log('🔍 Modal useEffect - isOpen:', isOpen, 'partNumber.id:', partNumber.id, 'part_drawing_2d:', !!partNumber.part_drawing_2d);
     if (isOpen && partNumber.id) {
       loadConversationHistory();
     }
   }, [isOpen, partNumber.id]);
 
   const loadConversationHistory = async () => {
-    console.log('🔍 Loading conversation history for part:', partNumber.id);
     setLoadingHistory(true);
     try {
       const response = await conversationService.getPartHistory(partNumber.id, {
@@ -89,23 +63,18 @@ export default function AIAnalysisModal({
         includeArchived: false
       });
       
-      console.log('🔍 History response:', response.success, 'count:', response.analysis_history?.length || 0);
       
       if (response.success) {
         setConversationHistory(response.analysis_history);
         // Set the most recent (first) conversation as current, or null if none
         if (response.analysis_history.length > 0) {
-          console.log('✅ Found existing history, using first conversation');
           setCurrentConversationId(response.analysis_history[0].conversation_id);
           setCurrentDocumentUrl(response.analysis_history[0].document_url);
         } else {
-          console.log('🔍 No history found. Document exists:', !!partNumber.part_drawing_2d);
           // No history exists, create initial conversation if there's a document
           if (partNumber.part_drawing_2d) {
-            console.log('🔄 Creating initial conversation...');
             await createInitialConversation();
           } else {
-            console.log('❌ No document, skipping conversation creation');
             setCurrentConversationId(null);
             setCurrentDocumentUrl(null);
           }
@@ -122,8 +91,6 @@ export default function AIAnalysisModal({
 
   const createInitialConversation = async () => {
     try {
-      console.log('🔄 Creating initial conversation for part:', partNumber.id);
-      console.log('🔍 Document URL:', partNumber.part_drawing_2d);
       
       const conversationData = {
         part_number_id: partNumber.id,
@@ -134,20 +101,16 @@ export default function AIAnalysisModal({
         session_id: `init_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
       
-      console.log('🔍 Conversation data:', conversationData);
       
       const response = await conversationService.createConversation(conversationData);
       
-      console.log('🔍 Create conversation response:', response.success, response.conversation?.id);
 
       if (response.success && response.conversation) {
-        console.log('✅ Initial conversation created:', response.conversation.id);
         
         // Update states with the new conversation
         setCurrentConversationId(response.conversation.id);
         setCurrentDocumentUrl(response.conversation.document_url);
         
-        console.log('🔄 Reloading history after creating conversation...');
         
         // Reload history to include the new conversation
         const historyResponse = await conversationService.getPartHistory(partNumber.id, {
@@ -156,7 +119,6 @@ export default function AIAnalysisModal({
           includeArchived: false
         });
         
-        console.log('🔍 History after create:', historyResponse.success, historyResponse.analysis_history?.length || 0);
         
         if (historyResponse.success) {
           setConversationHistory(historyResponse.analysis_history);

@@ -38,7 +38,6 @@ export default function TwoDAnalysisUpdated() {
   };
 
   const handleUploadComplete = (fileUrl: string) => {
-    console.log('Upload complete, fileUrl:', fileUrl);
     setState(prev => ({
       ...prev,
       s3Url: fileUrl,

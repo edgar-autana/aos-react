@@ -161,7 +161,6 @@ export const quotationApi = {
   // Create new quotation (root quote)
   async create(quotation: QuotationPayload): Promise<ApiResponse<Quotation>> {
     try {
-      console.log('Creating quotation with payload:', quotation);
       
       const { data, error } = await supabase
         .from('tb_quotation')
@@ -189,7 +188,6 @@ export const quotationApi = {
         parent_id: parentId
       };
 
-      console.log('Creating quotation version with payload:', quotationWithParent);
       
       const { data, error } = await supabase
         .from('tb_quotation')

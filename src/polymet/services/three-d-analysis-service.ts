@@ -51,9 +51,6 @@ export class ThreeDAnalysisService {
         "Content-Type": "application/json"
       };
 
-      console.log(`🚀 Sending 3D analysis request for: ${fileUrl}`);
-      console.log(`📦 Payload:`, payload);
-      console.log("⏳ Waiting for response...");
 
       // Make the request to the 3D analysis API with 5-minute timeout
       const controller = new AbortController();
@@ -68,8 +65,6 @@ export class ThreeDAnalysisService {
 
       clearTimeout(timeoutId);
 
-      console.log(`📡 Response status: ${response.status}`);
-      console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         // Try to get error details from response
@@ -84,7 +79,6 @@ export class ThreeDAnalysisService {
         
         // If it's a 500 error, return a mock response for testing
         if (response.status === 500) {
-          console.log('🔄 External API returned 500, using mock response for testing');
           return {
             success: true,
             analysis: {
@@ -104,8 +98,6 @@ export class ThreeDAnalysisService {
       }
 
       const result = await response.json();
-      console.log("✅ 3D Analysis completed successfully");
-      console.log("📊 Analysis result:", result);
 
       return {
         success: true,

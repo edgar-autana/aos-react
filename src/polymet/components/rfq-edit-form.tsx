@@ -63,7 +63,6 @@ export default function RfqEditForm({ rfq, onSave }: RfqEditFormProps) {
 
   const onSubmit = async (data: RFQPayload) => {
     try {
-      console.log('Form data before formatting:', data);
       
       // Format data properly - convert empty strings to null for UUID fields
       const formattedData = {
@@ -74,12 +73,9 @@ export default function RfqEditForm({ rfq, onSave }: RfqEditFormProps) {
         due_date: data.due_date || null,
       };
 
-      console.log('Formatted data for API:', formattedData);
-      console.log('Updating RFQ with ID:', rfq.id);
 
       const response = await rfqApi.update(rfq.id, formattedData);
       
-      console.log('API response:', response);
       
       if (response.error) {
         toast({

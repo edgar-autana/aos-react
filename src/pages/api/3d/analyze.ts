@@ -25,9 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "Content-Type": "application/json"
     };
 
-    console.log(`🚀 Sending analysis request for: ${fileUrl}`);
-    console.log("⏳ Waiting for response...");
-
     // Make the request to your 3D analysis API with 5-minute timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
@@ -46,8 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const result = await response.json();
-
-    console.log("✅ Analysis completed successfully");
 
     res.status(200).json({
       success: true,

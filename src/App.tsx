@@ -19,7 +19,23 @@ import PartDetailsPage from "@/polymet/pages/part-details-page";
 import PartNumberDetailsPage from "@/polymet/pages/part-number-details-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
 import NewContactsPage from "@/pages/contacts/ContactsPage";
+import SettingsPage from "@/polymet/components/settings-page";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import EnvironmentBanner from "@/components/EnvironmentBanner";
+import { OnboardingDashboard } from "@/polymet/components/onboarding-dashboard";
+import { OnboardingRedirect } from "@/components/OnboardingRedirect";
+import { CreateOrganizationPage } from "@/polymet/components/create-organization-page";
+import { LandingPage } from "@/components/LandingPage";
+import { GlobalDataProvider, useGlobalData } from "@/contexts/GlobalDataProviderReal";
+import GlobalLoadingScreen from "@/components/GlobalLoadingScreen";
+import { SuperAdminRoute } from "@/components/SuperAdminRoute";
+import { ConsoleAdminLayout } from "@/polymet/components/console-admin-layout";
+import { ConsoleAdminDashboard } from "@/polymet/pages/console-admin-dashboard";
+import { ConsoleAdminInvitations } from "@/polymet/pages/console-admin-invitations";
+import { ConsoleAdminOrganizations } from "@/polymet/pages/console-admin-organizations";
+import { ConsoleAdminSettings } from "@/polymet/pages/console-admin-settings";
+import { SuperAdminDebug } from "@/components/SuperAdminDebug";
+import { AcceptInvitationPage } from "@/polymet/components/accept-invitation-page";
 
 // Auth Layout Component
 function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -32,11 +48,45 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function CncOrderTrackerPrototype() {
+// App Content Component - only renders when data is ready
+function AppContent() {
+  const { isReady, error } = useGlobalData();
+
+  // Show loading screen until all data is loaded
+  if (!isReady) {
+    return <GlobalLoadingScreen />;
+  }
+
+  // Show error screen if data loading failed
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-red-600 mb-4">
+            Failed to Load Application
+          </h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // App is ready - render normal content
   return (
-    <>
-      <Router>
-        <Routes>
+    <OnboardingRedirect>
+      <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Public Invitation Route */}
+          <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
+          
           {/* Public Auth Routes */}
           <Route
             path="/sign-in"
@@ -49,7 +99,7 @@ export default function CncOrderTrackerPrototype() {
                       card: "shadow-lg"
                     }
                   }}
-                  redirectUrl="/"
+                  redirectUrl="/dashboard"
                 />
               </AuthLayout>
             }
@@ -66,7 +116,7 @@ export default function CncOrderTrackerPrototype() {
                       card: "shadow-lg"
                     }
                   }}
-                  redirectUrl="/"
+                  redirectUrl="/onboarding"
                 />
               </AuthLayout>
             }
@@ -74,9 +124,25 @@ export default function CncOrderTrackerPrototype() {
 
           {/* Protected Routes */}
           <Route
-            path="/"
+            path="/onboarding"
             element={
-              <ProtectedRoute permission={["org:view:dashboard", "org:all:access"]}>
+              <ProtectedRoute>
+                <OnboardingDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizations/new"
+            element={
+              <ProtectedRoute>
+                <CreateOrganizationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
                 <AppLayout>
                   <DashboardPage />
                 </AppLayout>
@@ -296,17 +362,42 @@ export default function CncOrderTrackerPrototype() {
             }
           />
 
-          {/* Placeholder routes for future development */}
+          {/* Settings Route */}
           <Route
             path="/settings"
             element={
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
-                  <PlaceholderPage title="Settings" />
+                  <SettingsPage />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
+
+          {/* Super Admin Debug Route */}
+          <Route
+            path="/debug/super-admin"
+            element={
+              <ProtectedRoute>
+                <SuperAdminDebug />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Super Admin Console Routes */}
+          <Route
+            path="/console/admin"
+            element={
+              <SuperAdminRoute>
+                <ConsoleAdminLayout />
+              </SuperAdminRoute>
+            }
+          >
+            <Route index element={<ConsoleAdminDashboard />} />
+            <Route path="invitations" element={<ConsoleAdminInvitations />} />
+            <Route path="organizations" element={<ConsoleAdminOrganizations />} />
+            <Route path="settings" element={<ConsoleAdminSettings />} />
+          </Route>
 
           <Route
             path="/help"
@@ -357,7 +448,19 @@ export default function CncOrderTrackerPrototype() {
             path="*"
             element={<Navigate to="/" replace />}
           />
-        </Routes>
+      </Routes>
+    </OnboardingRedirect>
+  );
+}
+
+export default function CncOrderTrackerPrototype() {
+  return (
+    <>
+      <Router>
+        <GlobalDataProvider>
+          <EnvironmentBanner />
+          <AppContent />
+        </GlobalDataProvider>
       </Router>
     </>
   );

@@ -113,9 +113,6 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
 
       const globalQuotationDetails = detailsResponse.data;
 
-      // Debug: Log the full structure
-      console.log('🔍 Full globalQuotationDetails:', globalQuotationDetails);
-      console.log('🔍 part_numbers structure:', globalQuotationDetails.part_numbers);
 
       // Prepare data for PDF generation
       const pdfData = {
@@ -134,15 +131,6 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
         
         // Quotations array - use the part_numbers structure from the query
         quotations: (globalQuotationDetails.part_numbers || [])?.map((item, index) => {
-          // Debug logging
-          console.log('🔍 Item Data:', {
-            partNumber: item.part_number?.drawing_number,
-            partName: item.part_number?.part_name,
-            mainProcess: item.part_number?.main_process,
-            quotationMoq1: item.quotation?.moq1,
-            quotationCncFixtures: item.quotation?.cnc_fixtures,
-            unitPrice: item.quotation?.unit_price
-          });
           
           // Get values directly from database fields
           const cncFixturesValue = item.quotation?.cnc_fixtures || 0;
@@ -152,11 +140,6 @@ export default function RfqGlobalQuotationsTab({ rfqId }: RfqGlobalQuotationsTab
           const freightMatch = item.quotation?.notes?.match(/Freight: ([\d.]+)/);
           const freightValue = freightMatch ? parseFloat(freightMatch[1]) : 0;
           
-          console.log('📋 Final Values:', {
-            cncFixturesValue,
-            freightValue,
-            moqValue
-          });
           
           return {
             index_quotation: index + 1,

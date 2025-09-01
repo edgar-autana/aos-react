@@ -42,8 +42,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'ocrText is required' });
     }
 
-    console.log(`🚀 Sending to OpenAI Assistant: ${ASSISTANT_ID}`);
-
     // Create a thread
     const threadResponse = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',

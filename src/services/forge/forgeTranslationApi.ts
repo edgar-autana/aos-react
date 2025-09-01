@@ -20,7 +20,6 @@ export const forgeTranslationApi = {
   // Translate STEP file to SVF format
   async translateStepToSvf(urn: string): Promise<TranslationResponse> {
     try {
-      console.log('Starting translation for URN:', urn);
       
       const response = await fetch(`${AOS_API_BASE_URL}/api/v1/autodesk/forge/translate`, {
         method: 'POST',
@@ -40,7 +39,6 @@ export const forgeTranslationApi = {
       }
 
       const data = await response.json();
-      console.log('Translation response:', data);
 
       if (data.success) {
         return {
