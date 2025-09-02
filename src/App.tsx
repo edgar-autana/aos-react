@@ -19,6 +19,7 @@ import PartDetailsPage from "@/polymet/pages/part-details-page";
 import PartNumberDetailsPage from "@/polymet/pages/part-number-details-page";
 import ContactProfilePage from "@/polymet/components/contact-profile-page";
 import NewContactsPage from "@/pages/contacts/ContactsPage";
+import CandidateCompaniesPage from "@/polymet/pages/candidate-companies-page";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Auth Layout Component
@@ -347,6 +348,17 @@ export default function CncOrderTrackerPrototype() {
               <ProtectedRoute permission="org:all:access">
                 <AppLayout>
                   <NewContactsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/candidate-companies"
+            element={
+              <ProtectedRoute permission="org:all:access">
+                <AppLayout>
+                  <CandidateCompaniesPage />
                 </AppLayout>
               </ProtectedRoute>
             }
