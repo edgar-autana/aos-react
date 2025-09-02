@@ -17,6 +17,7 @@ import {
   Contact,
   FactoryIcon,
   PackageIcon,
+  MapIcon,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
@@ -119,6 +120,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
       name: "Technical Analysis",
       path: "/technical-analysis",
       icon: <FileTextIcon className="h-5 w-5" />,
+      permissions: ["org:view:orders", "org:all:access"],
+    },
+    {
+      name: "Candidate Companies",
+      path: "/candidate-companies",
+      icon: <MapIcon className="h-5 w-5" />,
       permissions: ["org:view:orders", "org:all:access"],
     },
     {
