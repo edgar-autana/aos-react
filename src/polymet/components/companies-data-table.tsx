@@ -48,7 +48,7 @@ import {
   GlobeIcon,
   ArrowUpDownIcon,
 } from "lucide-react";
-import { CandidateCompany } from "@/data/mockCandidateCompanies";
+import { CandidateCompany } from "@/types/candidate-company";
 
 const columnHelper = createColumnHelper<CandidateCompany>();
 
@@ -158,24 +158,6 @@ export default function CompaniesDataTable({
       ),
     }),
 
-    columnHelper.accessor('employees', {
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="h-auto p-0 font-semibold"
-        >
-          Employees
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-gray-600 dark:text-gray-300">
-          {row.original.employees || 'N/A'}
-        </span>
-      ),
-    }),
-
     columnHelper.accessor('process', {
       header: 'Processes',
       cell: ({ row }) => (
@@ -193,44 +175,6 @@ export default function CompaniesDataTable({
         </div>
       ),
       enableSorting: false,
-    }),
-
-    columnHelper.display({
-      id: 'contact',
-      header: 'Contact',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <MailIcon className="h-3 w-3" />
-            <span>{row.original.emails.length}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <PhoneIcon className="h-3 w-3" />
-            <span>{row.original.phones.length}</span>
-          </div>
-          {row.original.website && (
-            <GlobeIcon className="h-3 w-3 text-gray-500" />
-          )}
-        </div>
-      ),
-    }),
-
-    columnHelper.accessor('scrapedAt', {
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="h-auto p-0 font-semibold"
-        >
-          Scraped Date
-          <ArrowUpDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-gray-600 dark:text-gray-300">
-          {row.original.scrapedAt.toLocaleDateString()}
-        </span>
-      ),
     }),
 
     columnHelper.display({

@@ -15,7 +15,7 @@ import {
   XCircleIcon,
   AlertCircleIcon
 } from "lucide-react";
-import { CandidateCompany } from "@/data/mockCandidateCompanies";
+import { CandidateCompany } from "@/types/candidate-company";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';

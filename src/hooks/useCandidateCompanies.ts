@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CandidateCompany } from '@/data/mockCandidateCompanies';
+import { CandidateCompany } from '@/types/candidate-company';
 
 interface CandidateCompaniesHook {
   companies: CandidateCompany[];

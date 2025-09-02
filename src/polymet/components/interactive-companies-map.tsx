@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPinIcon, BuildingIcon, UsersIcon, CalendarIcon, MailIcon, PhoneIcon } from "lucide-react";
-import { CandidateCompany } from "@/data/mockCandidateCompanies";
+import { CandidateCompany } from "@/types/candidate-company";
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 

@@ -25,7 +25,7 @@ import {
   GlobeIcon,
   RefreshCwIcon
 } from "lucide-react";
-import { CandidateCompany } from "@/data/mockCandidateCompanies";
+import { CandidateCompany } from "@/types/candidate-company";
 import { useCandidateCompanies } from "@/hooks/useCandidateCompanies";
 import InteractiveCompaniesMap from "@/polymet/components/interactive-companies-map";
 import CompanyDetailsModal from "@/polymet/components/company-details-modal";
